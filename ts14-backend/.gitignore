@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv/
 .env
 **/__pycache__/
@@ -5,3 +6,6 @@ __pycache__/
 node_modules/
 dist/
 build/
+=======
+venv
+>>>>>>> 56961924 (bugs fixed)
