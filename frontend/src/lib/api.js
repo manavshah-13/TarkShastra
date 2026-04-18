@@ -28,7 +28,6 @@ export const api = {
     let body = JSON.stringify(data);
 
     if (isFormData) {
-      // For OAuth2 login, FastAPI expects x-www-form-urlencoded
       delete headers['Content-Type'];
       body = new URLSearchParams(data).toString();
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -38,6 +37,32 @@ export const api = {
       method: 'POST',
       headers,
       body,
+    });
+    return this.handleResponse(response);
+  },
+
+  async patch(endpoint, data) {
+    const response = await fetch(`/api${endpoint}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  },
+
+  async put(endpoint, data) {
+    const response = await fetch(`/api${endpoint}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  },
+
+  async delete(endpoint) {
+    const response = await fetch(`/api${endpoint}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
     });
     return this.handleResponse(response);
   },

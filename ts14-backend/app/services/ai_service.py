@@ -25,18 +25,17 @@ class AIService:
         self.rec_prep = None
         self.sentiment_map = {'negative': 0, 'neutral': 1, 'positive': 2}
         
-        # Paths relative to the root of the project
-        self.root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         self.load_models()
 
     def load_models(self):
         try:
-            self.cat_model = joblib.load(os.path.join(self.root_dir, 'category_model.joblib'))
-            self.pri_model = joblib.load(os.path.join(self.root_dir, 'priority_model.joblib'))
-            self.res_model = joblib.load(os.path.join(self.root_dir, 'resolution_model.joblib'))
-            self.knn_model = joblib.load(os.path.join(self.root_dir, 'knn_model.joblib'))
-            self.rec_prep = joblib.load(os.path.join(self.root_dir, 'rec_prep.joblib'))
-            print("Successfully loaded all AI models.")
+            m_dir = settings.MODELS_DIR
+            self.cat_model = joblib.load(os.path.join(m_dir, 'category_model.joblib'))
+            self.pri_model = joblib.load(os.path.join(m_dir, 'priority_model.joblib'))
+            self.res_model = joblib.load(os.path.join(m_dir, 'resolution_model.joblib'))
+            self.knn_model = joblib.load(os.path.join(m_dir, 'knn_model.joblib'))
+            self.rec_prep = joblib.load(os.path.join(m_dir, 'rec_prep.joblib'))
+            print(f"Successfully loaded all AI models from {m_dir}")
         except Exception as e:
             print(f"Error loading models: {e}")
 
@@ -87,7 +86,7 @@ class AIService:
         
         try:
             # Read the CSV to get historical resolution actions
-            csv_path = os.path.join(self.root_dir, 'TS-PS14.csv')
+            csv_path = settings.DATA_FILE_PATH
             live_df = pd.read_csv(csv_path)
             neighbors_resolutions = live_df['resolution_action'].iloc[indices[0]].values
             

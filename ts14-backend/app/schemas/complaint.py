@@ -10,6 +10,9 @@ class ComplaintBase(BaseModel):
 class ComplaintCreate(ComplaintBase):
     pass
 
+class ComplaintStatusUpdate(BaseModel):
+    status: ComplaintStatus
+
 class ComplaintUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None

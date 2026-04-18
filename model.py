@@ -16,7 +16,7 @@ from sklearn.neighbors import NearestNeighbors
 from collections import Counter
 
 
-df = pd.read_csv(r'C:\Users\MANAV\Desktop\TarkShastra\Tarkshastra\TS-PS14.csv')
+df = pd.read_csv('TS-PS14.csv')
 
 
 df['text'] = df['text'].fillna('').astype(str)
@@ -185,7 +185,7 @@ def predict_complaint(complaint_text, sentiment='neutral'):
     
     # Retrieve the resolution types from those indices
     # Dynamically read the database so manual overwrites to resolutions appear instantly without retraining
-    live_df = pd.read_csv(r'C:\Users\MANAV\Desktop\TarkShastra\Tarkshastra\TS-PS14.csv')
+    live_df = pd.read_csv('TS-PS14.csv')
     neighbors_resolutions = live_df['resolution_action'].iloc[indices[0]].values
     most_common_res, count = Counter(neighbors_resolutions).most_common(1)[0]
     

@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 from app.core.database import get_db
 from app.models.complaint import Complaint as ComplaintModel, ComplaintStatus, Priority
-from app.schemas.complaint import Complaint, ComplaintCreate, ComplaintUpdate
+from app.schemas.complaint import Complaint, ComplaintCreate, ComplaintUpdate, ComplaintStatusUpdate
 from app.services.ai_service import ai_service
 from app.routers.auth import get_current_user
 from app.models.user import User as UserModel, UserRole
@@ -58,13 +58,13 @@ async def get_complaint(id: int, db: Session = Depends(get_db)):
     return complaint
 
 @router.patch("/{id}/status", response_model=Complaint)
-async def update_status(id: int, status_in: ComplaintStatus, db: Session = Depends(get_db)):
+async def update_status(id: int, status_update: ComplaintStatusUpdate, db: Session = Depends(get_db)):
     complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
     
-    complaint.status = status_in
-    if status_in == ComplaintStatus.RESOLVED:
+    complaint.status = status_update.status
+    if status_update.status == ComplaintStatus.RESOLVED:
         complaint.resolved_at = datetime.utcnow()
     
     db.commit()

@@ -63,7 +63,7 @@ const AITheater = () => {
     
     setIsConfirming(true);
     try {
-      await api.patch(`/complaints/${complaint.id}/status`, 'IN_PROGRESS');
+      await api.patch(`/complaints/${complaint.id}/status`, { status: 'in_progress' });
       
       setTimeout(() => {
         navigate(`/complaint/${complaint.id}`);
