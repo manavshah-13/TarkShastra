@@ -7,10 +7,13 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, classification_report, r2_score, mean_absolute_error
+from sklearn.neighbors import NearestNeighbors
+from collections import Counter
 
 
 df = pd.read_csv(r'C:\Users\MANAV\Desktop\TarkShastra\Tarkshastra\TS-PS14.csv')
@@ -81,7 +84,7 @@ cat_model = Pipeline([
 cat_model.fit(X_train, y_cat_train)
 y_cat_pred = cat_model.predict(X_test)
 
-print("=== Category Classifier (no leakage) ===")
+print("=== Category Classifier ===")
 print(f"Accuracy: {accuracy_score(y_cat_test, y_cat_pred):.4f}")
 print(classification_report(y_cat_test, y_cat_pred))
 
@@ -124,7 +127,7 @@ y_reg_test_log = np.log1p(y_reg_test)
 
 reg_model = Pipeline([
     ('prep', reg_preprocessor),
-    ('reg', RandomForestRegressor(n_estimators=100, max_depth=15, random_state=42, n_jobs=-1))
+    ('reg', XGBRegressor(n_estimators=200, max_depth=6, learning_rate=0.1, random_state=42, n_jobs=-1))
 ])
 
 reg_model.fit(X_train, y_reg_train_log)
@@ -138,14 +141,27 @@ print(f"MAE: {mean_absolute_error(y_reg_test, y_pred):.2f} days")
 
 
 
+# --- Explainable Recommendation Model ---
+print("Training Nearest Neighbors for Recommendation...")
+recommender_preprocessor = ColumnTransformer([
+    ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1,2)), priority_text_col)
+])
+
+X_tfidf = recommender_preprocessor.fit_transform(X) # fit on full dataset
+knn = NearestNeighbors(n_neighbors=5, metric='cosine')
+knn.fit(X_tfidf)
+
 joblib.dump(cat_model, 'category_model.joblib')
 joblib.dump(priority_model, 'priority_model.joblib')
 joblib.dump(reg_model, 'resolution_model.joblib')
-print("Models saved successfully.")
+joblib.dump(recommender_preprocessor, 'rec_prep.joblib')
+joblib.dump(knn, 'knn_model.joblib')
+
+print("All Models and Explainable Recommender saved successfully.")
 
 
 def predict_complaint(complaint_text, sentiment='neutral'):
-    """Return category, priority, and expected resolution time."""
+    """Return category, priority, expected resolution time, and resolution recommendation."""
     import pandas as pd
     temp_df = pd.DataFrame([{
         'text': complaint_text,
@@ -161,11 +177,32 @@ def predict_complaint(complaint_text, sentiment='neutral'):
     category = cat_model.predict(temp_df)[0]
     priority = priority_model.predict(temp_df)[0]
     resolution_log = reg_model.predict(temp_df)[0]
-    resolution = np.expm1(resolution_log)
-    return category, priority, resolution
+    resolution_time = np.expm1(resolution_log)
+    
+    # Run explainable recommender using historical records
+    tfidf_vec = recommender_preprocessor.transform(temp_df)
+    distances, indices = knn.kneighbors(tfidf_vec)
+    
+    # Retrieve the resolution types from those indices
+    # Dynamically read the database so manual overwrites to resolutions appear instantly without retraining
+    live_df = pd.read_csv(r'C:\Users\MANAV\Desktop\TarkShastra\Tarkshastra\TS-PS14.csv')
+    neighbors_resolutions = live_df['resolution_action'].iloc[indices[0]].values
+    most_common_res, count = Counter(neighbors_resolutions).most_common(1)[0]
+    
+    # Graceful Fallback if < 3 cases agree
+    if count < 3:
+        most_common_res = 'Escalate to supervisor'
+        explanation = "We suggested 'Escalate to supervisor' because no clear consensus (<3 cases) was found among past similar cases."
+    else:
+        confidence = (count / 5.0) * 100
+        explanation = f"We suggested '{most_common_res}' because {confidence:.0f}% ({count} out of 5) of similar past cases used it."
+    
+    return category, priority, resolution_time, most_common_res, explanation
 
 
 test_text = "This product broke immediately! I need a refund urgently."
-cat, pri, time = predict_complaint(test_text, sentiment='negative')
+cat, pri, time, rec, expl = predict_complaint(test_text, sentiment='negative')
 print(f"\nTest complaint: {test_text}")
 print(f"Predicted category: {cat}, priority: {pri}, resolution time: {time:.1f} days")
+print(f"Recommended Action: {rec}")
+print(f"Explanation: {expl}")
