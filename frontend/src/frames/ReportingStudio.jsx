@@ -151,8 +151,7 @@ const ReportingStudio = () => {
   };
 
   return (
-    <AppLayout activePage="Analytics">
-      <div className="flex h-full -m-8 relative">
+    <div className="flex h-full -m-8 relative">
 
         {/* Collapsible Filter Panel */}
         <AnimatePresence mode="popLayout">
@@ -441,7 +440,6 @@ const ReportingStudio = () => {
             </AnimatePresence>
         </main>
       </div>
-    </AppLayout>
   );
 };
 

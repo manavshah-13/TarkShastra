@@ -123,7 +123,6 @@ const UserSettings = () => {
   ];
 
   return (
-    <AppLayout activePage="Settings">
       <div className="max-w-[1500px] mx-auto pb-12 text-text-primary px-6">
         <header className="flex justify-between items-end mb-12">
           <div className="space-y-1">
@@ -394,7 +393,6 @@ const UserSettings = () => {
               </AnimatePresence>
            </div>
         </div>
-      </div>
 
       {/* Avatar Cropper Modal */}
       <AnimatePresence>
@@ -456,8 +454,8 @@ const UserSettings = () => {
             </motion.div>
          )}
       </AnimatePresence>
-    </AppLayout>
-  );
+    </div>
+);
 };
 
 

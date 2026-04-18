@@ -96,8 +96,7 @@ const ExecutiveDashboard = () => {
   };
 
   return (
-    <AppLayout activePage="Dashboard">
-      <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">Executive Pulse</h1>
@@ -218,7 +217,6 @@ const ExecutiveDashboard = () => {
           <Plus size={24} className="text-white" />
         </button>
       </div>
-    </AppLayout>
   );
 };
 

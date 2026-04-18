@@ -105,8 +105,7 @@ const ComplaintComposer = () => {
   const wordCount = content.replace(/<[^>]*>/g, '').split(' ').filter(x => x).length;
 
   return (
-    <AppLayout activePage="New Complaint">
-      <div className="max-w-[1400px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1400px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">Case Creation Studio</h1>
@@ -251,9 +250,8 @@ const ComplaintComposer = () => {
              </div>
           </div>
         </div>
-      </div>
-    </AppLayout>
+    </div>
   );
-};
+}
 
-export default ComplaintComposer;
+export default ComplaintComposer

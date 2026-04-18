@@ -38,6 +38,9 @@ class ComplaintAnalysisResult(BaseModel):
     category: str
     priority: Priority
     confidence: float
+    recommended_action: str
+    explanation: str
+    estimated_resolution_days: float
 
 class SHAPExplanation(BaseModel):
     base_value: float

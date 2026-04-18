@@ -123,17 +123,14 @@ const ClassificationReview = () => {
 
   if (loading) {
     return (
-      <AppLayout activePage="QA">
         <div className="flex items-center justify-center h-64">
           <Loader2 size={32} className="animate-spin text-brand-primary" />
         </div>
-      </AppLayout>
     );
   }
 
   if (!currentComplaint) {
     return (
-      <AppLayout activePage="QA">
         <div className="text-center py-12">
           <Check size={48} className="mx-auto text-emerald-500 mb-4" />
           <h2 className="text-xl font-bold text-text-primary">No Reviews Pending</h2>
@@ -142,13 +139,11 @@ const ClassificationReview = () => {
             Back to QA Dashboard
           </button>
         </div>
-      </AppLayout>
     );
   }
 
   return (
-    <AppLayout activePage="QA">
-      <div className="max-w-[1400px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1400px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-6">
             <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 hover:bg-card-bg border border-border-subtle rounded-lg text-text-muted disabled:opacity-30">
@@ -367,7 +362,7 @@ const ClassificationReview = () => {
 
         </div>
       </div>
-    </AppLayout>
+
   );
 };
 

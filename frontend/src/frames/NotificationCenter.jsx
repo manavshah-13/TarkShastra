@@ -242,7 +242,6 @@ export const NotificationFeed = ({ standalone = false }) => {
 
 const NotificationCenter = () => {
   return (
-    <AppLayout activePage="Notifications">
       <div className="max-w-[1500px] mx-auto pb-12 text-text-primary px-6">
         <header className="flex justify-between items-end mb-12">
           <div className="space-y-1">
@@ -263,7 +262,6 @@ const NotificationCenter = () => {
 
         <NotificationFeed standalone={true} />
       </div>
-    </AppLayout>
   );
 };
 

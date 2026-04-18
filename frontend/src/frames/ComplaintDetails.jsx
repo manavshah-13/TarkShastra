@@ -169,32 +169,27 @@ const ComplaintDetails = () => {
 
   if (loading) {
     return (
-      <AppLayout activePage="Complaints">
         <div className="flex items-center justify-center h-64">
           <Loader2 size={32} className="animate-spin text-brand-primary" />
         </div>
-      </AppLayout>
     );
   }
 
   if (!complaint) {
     return (
-      <AppLayout activePage="Complaints">
         <div className="text-center py-12">
           <XCircle size={48} className="mx-auto text-rose-500 mb-4" />
           <h2 className="text-xl font-bold text-text-primary">Complaint Not Found</h2>
           <p className="text-text-muted mt-2">The requested complaint could not be found.</p>
           <button onClick={() => navigate('/queue')} className="btn-primary mt-4">Back to Queue</button>
         </div>
-      </AppLayout>
     );
   }
 
   const createdAt = complaint.created_at || new Date().toISOString();
 
   return (
-    <AppLayout activePage="Complaints">
-      <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
             <div className="flex items-center gap-3 mb-2">
@@ -332,7 +327,6 @@ const ComplaintDetails = () => {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 };
 
