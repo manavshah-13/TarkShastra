@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "quill/dist/quill.snow.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular;
+
+  /* Semantic Theme Mapping */
+  --color-app-bg: var(--bg-app);
+  --color-card-bg: var(--bg-card);
+  --color-sidebar-bg: var(--bg-sidebar);
+  --color-header-bg: var(--bg-header);
+  --color-input-bg: var(--bg-input);
+  
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+  
+  --color-border-subtle: var(--border-subtle);
+  --color-border-focus: var(--border-focus);
+  
+  --color-brand-primary: var(--primary);
+  --color-brand-hover: var(--primary-hover);
+  --color-brand-subtle: var(--primary-subtle);
+}
+
+:root {
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --transition-fast: 0.2s ease;
+  --sidebar-width: 256px;
+  --header-height: 64px;
+}
+
+[data-theme='light'] {
+  --bg-app: #F9FAFB;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #FFFFFF;
+  --bg-header: #FFFFFF;
+  --bg-input: #F3F4F6;
+  
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --text-inverse: #FFFFFF;
+  
+  --border-subtle: #E2E8F0;
+  --border-focus: #2563EB;
+  
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-subtle: #EFF6FF;
+}
+
+[data-theme='dark'] {
+  --bg-app: #0F172A;
+  --bg-card: #1E293B;
+  --bg-sidebar: #0F172A;
+  --bg-header: #1E293B;
+  --bg-input: #334155;
+  
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --text-inverse: #0F172A;
+  
+  --border-subtle: #334155;
+  --border-focus: #3B82F6;
+  
+  --primary: #3B82F6;
+  --primary-hover: #60A5FA;
+  --primary-subtle: rgba(59, 130, 246, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-app-bg text-text-primary font-sans antialiased transition-colors duration-200;
+  }
+}
+
+/* Custom Utilities for Premium Look */
+@layer utilities {
+  .card {
+    @apply bg-card-bg border border-border-subtle rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-brand-primary text-text-inverse px-4 py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-hover active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2.5 bg-input-bg border border-border-subtle rounded-lg text-text-primary text-sm focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all;
+  }
+
+  .text-tiny {
+    @apply text-[10px] font-bold uppercase tracking-wider text-text-muted;
+  }
+}
+
+/* Frame Layout */
+.frame-transition-container {
+  @apply w-full h-screen relative overflow-x-hidden;
+}
+
+/* Quill Theme Overrides */
+.ql-container { @apply !font-sans; }
+.ql-toolbar { @apply !border-border-subtle !bg-card-bg; }
+[data-theme='dark'] .ql-snow .ql-stroke { stroke: var(--text-primary); }
+[data-theme='dark'] .ql-snow .ql-fill { fill: var(--text-primary); }
+[data-theme='dark'] .ql-editor.ql-blank::before { color: var(--text-muted); }
