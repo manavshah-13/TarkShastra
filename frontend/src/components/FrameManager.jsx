@@ -17,6 +17,12 @@ const FrameManager = ({ frames, currentFrameIndex: initialIndex = 0 }) => {
     }
   };
 
+  const goToFrame = (index) => {
+    if (index >= 0 && index < frames.length) {
+      setCurrentFrame(index);
+    }
+  };
+
   const ActiveComponent = frames[currentFrame].component;
 
   return (
@@ -30,7 +36,7 @@ const FrameManager = ({ frames, currentFrameIndex: initialIndex = 0 }) => {
           transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           className="h-full w-full overflow-y-auto"
         >
-          <ActiveComponent onNext={nextFrame} onPrev={prevFrame} />
+          <ActiveComponent onNext={nextFrame} onPrev={prevFrame} goToFrame={goToFrame} />
         </motion.div>
       </AnimatePresence>
 

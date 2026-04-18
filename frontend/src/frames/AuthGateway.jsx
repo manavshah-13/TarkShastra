@@ -1,10 +1,60 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Lock, ChevronRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, ChevronRight, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-const AuthGateway = ({ onNext }) => {
-  const [role, setRole] = useState('Executive');
+const AuthGateway = ({ onNext, goToFrame }) => {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [strength, setStrength] = useState(0);
+
+  // Email Regex Validation
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const showEmailError = email.length > 0 && !isValidEmail && !emailFocus;
+
+  // Password Strength Logic
+  useEffect(() => {
+    let s = 0;
+    if (password.length > 5) s += 1;
+    if (password.length > 10) s += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) s += 1;
+    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) s += 1;
+    setStrength(s);
+  }, [password]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!isValidEmail) return;
+    
+    setIsLoading(true);
+    setIsError(false);
+    
+    try {
+      // Backend expects username, so we send the email prefix or the email itself
+      // Based on our seed script, we'll try to map the email to the username
+      // For demo, we assume email and username are treated as ID
+      const user = await login(email.split('@')[0], password);
+      
+      // Role-Based Redirect Logic
+      if (user.role === 'admin') goToFrame(1); // Executive Dashboard
+      else if (user.role === 'manager') goToFrame(9); // Manager Overview
+      else goToFrame(6); // QA Analytics (Analyst)
+      
+    } catch (err) {
+      setIsError(true);
+      setErrorMsg(err.message || 'Authentication Failed');
+      // Clear error after timeout
+      setTimeout(() => setIsError(false), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-app-bg transition-colors duration-200">
@@ -37,78 +87,99 @@ const AuthGateway = ({ onNext }) => {
             <p className="text-text-secondary">Please enter your credentials to access the TarkShastra ledger.</p>
           </header>
 
-          <div className="space-y-6">
-            {/* Role Selection */}
-            <div className="space-y-3">
-              <label className="text-tiny text-text-muted font-bold tracking-widest uppercase">System Authority Level</label>
-              <div className="flex p-1 bg-input-bg rounded-xl border border-border-subtle">
-                {['Executive', 'Manager', 'Analyst'].map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRole(r)}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                      role === r 
-                        ? 'bg-card-bg text-brand-primary shadow-sm ring-1 ring-border-subtle' 
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Failure Toast (Conditional) */}
+            <AnimatePresence>
+              {isError && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  className="fixed top-8 right-8 z-[2000] flex items-center gap-3 bg-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-rose-500/20"
+                >
+                  <AlertCircle size={20} />
+                  <span className="text-sm font-bold">{errorMsg}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Fields */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-tiny">Operations Email</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-primary transition-colors" size={18} />
+                <label className="text-tiny">Operations Identity (Email)</label>
+                <div className={`relative group transition-all ${showEmailError ? 'ring-2 ring-rose-500/20' : ''}`}>
+                  <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${showEmailError ? 'text-rose-500' : 'text-text-muted group-focus-within:text-brand-primary'}`} size={18} />
                   <input 
                     type="email" 
-                    placeholder="name@velocity-corp.io"
-                    className="input-field pl-10 h-12"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setEmailFocus(true)}
+                    onBlur={() => setEmailFocus(false)}
+                    placeholder="admin@tarkshastra.io"
+                    className={`input-field pl-12 h-14 text-base ${showEmailError ? 'border-rose-500 focus:border-rose-500' : ''}`}
+                    required
                   />
                 </div>
+                {showEmailError && <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest pl-1">Invalid ID Format</p>}
               </div>
 
               <div className="space-y-2">
                  <div className="flex justify-between items-center">
-                    <label className="text-tiny">Secret Token</label>
-                    <a href="#" className="text-[10px] font-bold text-brand-primary hover:underline">Revoke Access?</a>
+                    <label className="text-tiny">Neural Access Key</label>
+                    <a href="#" className="text-[10px] font-bold text-brand-primary hover:underline">Reset Token</a>
                  </div>
                 <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-primary transition-colors" size={18} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-primary transition-colors" size={18} />
                   <input 
                     type={showPassword ? 'text' : 'password'} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="input-field pl-10 pr-12 h-12"
+                    className="input-field pl-12 pr-12 h-14 text-base"
+                    required
                   />
                   <button 
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-2 transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {/* Strength Indicator */}
+                {password.length > 0 && (
+                  <div className="flex gap-1.5 pt-1 px-1">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= strength ? (strength <= 2 ? 'bg-amber-500 shadow-[0_0_8px_var(--warning)]' : 'bg-emerald-500 shadow-[0_0_8px_var(--success)]') : 'bg-border-subtle'}`} />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <input type="checkbox" className="w-4 h-4 rounded border-border-subtle text-brand-primary focus:ring-brand-primary/20" />
-              <span className="text-xs text-text-secondary font-medium">Persist internal authority session for 8 hours</span>
+              <input type="checkbox" className="w-4 h-4 rounded border-border-subtle text-brand-primary focus:ring-brand-primary/20 cursor-pointer" />
+              <span className="text-xs text-text-secondary font-medium">Persist gateway authority for 8h</span>
             </div>
 
             <motion.button 
+              type="submit"
+              disabled={isLoading || !isValidEmail}
+              animate={isError ? { x: [0, -10, 10, -10, 10, 0] } : {}}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              onClick={onNext}
-              className="btn-primary w-full h-12 flex items-center justify-center gap-2 group text-base"
+              className="btn-primary w-full h-14 flex items-center justify-center gap-3 group text-base shadow-xl shadow-brand-primary/20 relative overflow-hidden disabled:opacity-70"
             >
-              Access System Core
-              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  Establish Connection
+                  <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </motion.button>
-          </div>
+          </form>
 
           <footer className="pt-10 flex flex-col items-center gap-6 border-t border-border-subtle">
              <div className="flex items-center gap-3 text-text-muted bg-app-bg px-4 py-2 rounded-full border border-border-subtle">

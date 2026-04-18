@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,8 +18,11 @@ import {
   ExternalLink,
   ShieldCheck,
   MoreVertical,
-  Clock
+  Clock,
+  Eye,
+  FileSpreadsheet
 } from 'lucide-react';
+import { api } from '../lib/api';
 
 const StepIndicator = ({ current, total }) => (
   <div className="flex items-center gap-3">
@@ -39,16 +43,41 @@ const StepIndicator = ({ current, total }) => (
   </div>
 );
 
-const ReportGenerator = ({ onNext }) => {
+const ReportGenerator = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [reportConfig, setReportConfig] = useState({
+    type: 'Summary',
+    format: 'PDF',
+    includeCharts: true,
+    includeRawData: false,
+    range: 'L-7D'
+  });
 
   const startGeneration = () => {
     setIsGenerating(true);
     setTimeout(() => {
       setIsGenerating(false);
-      onNext();
+      setStep(3);
     }, 2500);
+  };
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      // Mock signed URL generation
+      const res = await api.post('/reports/generate', reportConfig).catch(() => ({ url: '#' }));
+      console.log('Generating signed URL...', res.url);
+      setTimeout(() => {
+        setIsGenerating(false);
+        // Simulate download
+        alert('Download initiated via secure signed URL.');
+      }, 1500);
+    } catch (err) {
+      console.error('Report generation failed', err);
+      setIsGenerating(false);
+    }
   };
 
   const history = [
@@ -58,10 +87,10 @@ const ReportGenerator = ({ onNext }) => {
 
   return (
     <AppLayout activePage="Analytics">
-      <div className="max-w-[1400px] mx-auto space-y-8 pb-12 text-text-primary">
+      <div className="max-w-[1500px] mx-auto space-y-8 pb-12 text-text-primary">
         <header className="flex justify-between items-center">
           <div className="space-y-1">
-             <p className="text-tiny">TarkShastra Ledger Intel</p>
+             <p className="text-tiny text-text-muted underline decoration-brand-primary decoration-2 underline-offset-4 font-black">TarkShastra Ledger Intel</p>
              <h1 className="text-3xl font-extrabold tracking-tight">Report Engineering Studio</h1>
           </div>
           <StepIndicator current={step} total={3} />
@@ -71,7 +100,7 @@ const ReportGenerator = ({ onNext }) => {
            
            {/* Wizard Canvas (8 cols) */}
            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-              <div className="card min-h-[500px] flex flex-col relative overflow-hidden">
+              <div className="card min-h-[600px] flex flex-col relative overflow-hidden bg-[#0F172A]/40 backdrop-blur-xl">
                  <AnimatePresence mode="wait">
                     {step === 1 && (
                       <motion.div 
@@ -79,28 +108,38 @@ const ReportGenerator = ({ onNext }) => {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className="space-y-8 flex-1"
+                        className="space-y-10 flex-1"
                       >
-                         <div className="flex items-center gap-4 mb-8">
+                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-brand-primary/10 text-brand-primary rounded-xl"><Layers size={24} /></div>
                             <div>
-                               <h3 className="text-xl font-bold tracking-tight">Template Selection</h3>
-                               <p className="text-sm text-text-secondary opacity-80">Define the schema and structure of your intelligence output</p>
+                               <h3 className="text-xl font-black tracking-tight uppercase">Template Selection</h3>
+                               <p className="text-xs text-text-secondary font-medium mt-1">Select the core structure for intelligence output</p>
                             </div>
                          </div>
                          
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
-                              { t: 'Strategic Summary', d: 'High-level KPI overview for executive review.', i: FileText },
-                              { t: 'Operational Audit', d: 'Granular complaint tracking and agent throughput.', i: Settings },
-                              { t: 'Safety & Risk', d: 'Detailed analysis of P0 breaches and safety leaks.', i: Database },
-                              { t: 'Neural Insight', d: 'Model accuracy reports and SHAP influence logs.', i: Cpu },
+                              { t: 'Strategic Summary', d: 'High-level KPI overview for executive review.', i: FileText, type: 'Summary' },
+                              { t: 'Operational Audit', d: 'Granular complaint tracking and agent throughput.', i: Settings, type: 'Audit' },
+                              { t: 'Safety & Risk', d: 'Detailed analysis of P0 breaches and safety leaks.', i: Database, type: 'Safety' },
+                              { t: 'Neural Insight', d: 'Model accuracy reports and SHAP influence logs.', i: Cpu, type: 'Neural' },
                             ].map(item => (
-                              <button key={item.t} className="p-6 text-left bg-app-bg border border-border-subtle rounded-2xl hover:border-brand-primary hover:bg-brand-subtle transition-all group flex flex-col gap-4">
-                                 <div className="p-2 bg-card-bg rounded-lg border border-border-subtle group-hover:text-brand-primary group-hover:scale-110 transition-transform w-fit"><item.i size={20} /></div>
+                              <button 
+                                key={item.t} 
+                                onClick={() => setReportConfig({ ...reportConfig, type: item.type })}
+                                className={`p-8 text-left rounded-3xl transition-all group flex flex-col gap-5 border-2 ${
+                                  reportConfig.type === item.type ? 'bg-brand-primary/10 border-brand-primary shadow-2xl shadow-brand-primary/10' : 'bg-app-bg border-border-subtle hover:border-brand-primary/40'
+                                }`}
+                              >
+                                 <div className={`p-3 rounded-2xl border transition-all w-fit shadow-sm ${
+                                   reportConfig.type === item.type ? 'bg-brand-primary text-white border-brand-primary' : 'bg-card-bg border-border-subtle group-hover:text-brand-primary'
+                                 }`}>
+                                    <item.i size={24} />
+                                 </div>
                                  <div>
-                                    <h4 className="font-bold text-sm mb-1">{item.t}</h4>
-                                    <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2">{item.d}</p>
+                                    <h4 className="font-extrabold text-sm mb-1 uppercase tracking-tight">{item.t}</h4>
+                                    <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2 font-medium opacity-80">{item.d}</p>
                                  </div>
                               </button>
                             ))}
@@ -114,34 +153,79 @@ const ReportGenerator = ({ onNext }) => {
                          initial={{ opacity: 0, x: 20 }}
                          animate={{ opacity: 1, x: 0 }}
                          exit={{ opacity: 0, x: -20 }}
-                         className="space-y-8 flex-1"
+                         className="space-y-10 flex-1"
                        >
-                          <div className="flex items-center gap-4 mb-8">
+                          <div className="flex items-center gap-4">
                              <div className="p-3 bg-brand-primary/10 text-brand-primary rounded-xl"><Calendar size={24} /></div>
                              <div>
-                                <h3 className="text-xl font-bold tracking-tight">Parameter Logic</h3>
-                                <p className="text-sm text-text-secondary opacity-80">Define date spans, filter depths, and metadata inclusion</p>
+                                <h3 className="text-xl font-black tracking-tight uppercase">Parameter Matrix</h3>
+                                <p className="text-xs text-text-secondary font-medium mt-1">Configure telemetry windows and inclusion logic</p>
                              </div>
                           </div>
                           
-                          <div className="space-y-6">
-                             <div className="space-y-3">
-                                <label className="text-tiny text-text-muted font-black tracking-[0.15em] uppercase">Time Horizon</label>
-                                <div className="flex gap-3">
+                          <div className="space-y-10">
+                             <div className="space-y-4">
+                                <label className="text-tiny text-text-muted font-black tracking-[0.2em] uppercase px-1">Telemetry Window</label>
+                                <div className="flex gap-4">
                                    {['L-24H', 'L-7D', 'L-30D', 'QTD'].map(h => (
-                                     <button key={h} className="flex-1 py-3 bg-app-bg border border-border-subtle rounded-xl text-xs font-bold text-text-muted hover:border-brand-primary hover:text-brand-primary transition-all uppercase">{h}</button>
+                                     <button 
+                                       key={h} 
+                                       onClick={() => setReportConfig({ ...reportConfig, range: h })}
+                                       className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all uppercase border-2 ${
+                                         reportConfig.range === h ? 'bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20' : 'bg-app-bg border-border-subtle text-text-muted'
+                                       }`}
+                                     >
+                                        {h}
+                                     </button>
                                    ))}
                                 </div>
                              </div>
+
+                             <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                   <label className="text-tiny text-text-muted font-black tracking-[0.2em] uppercase px-1">Output Protocol</label>
+                                   <div className="flex bg-app-bg p-1.5 rounded-2xl border border-border-subtle">
+                                      {['PDF', 'Excel'].map(f => (
+                                        <button 
+                                          key={f} 
+                                          onClick={() => setReportConfig({ ...reportConfig, format: f })}
+                                          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${
+                                            reportConfig.format === f ? 'bg-card-bg text-brand-primary shadow-sm' : 'text-text-muted'
+                                          }`}
+                                        >
+                                           {f === 'PDF' ? <FileText size={14} /> : <FileSpreadsheet size={14} />}
+                                           {f}
+                                        </button>
+                                      ))}
+                                   </div>
+                                </div>
+                                <div className="space-y-4">
+                                   <label className="text-tiny text-text-muted font-black tracking-[0.2em] uppercase px-1">Data Depth</label>
+                                   <div className="space-y-3">
+                                      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setReportConfig({ ...reportConfig, includeCharts: !reportConfig.includeCharts })}>
+                                         <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${reportConfig.includeCharts ? 'bg-brand-primary border-brand-primary' : 'border-slate-700 bg-app-bg'}`}>
+                                            {reportConfig.includeCharts && <Check size={14} className="text-white" strokeWidth={4} />}
+                                         </div>
+                                         <span className="text-[11px] font-bold text-text-primary group-hover:text-brand-primary">Include Visual Charts</span>
+                                      </div>
+                                      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setReportConfig({ ...reportConfig, includeRawData: !reportConfig.includeRawData })}>
+                                         <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${reportConfig.includeRawData ? 'bg-brand-primary border-brand-primary' : 'border-slate-700 bg-app-bg'}`}>
+                                            {reportConfig.includeRawData && <Check size={14} className="text-white" strokeWidth={4} />}
+                                         </div>
+                                         <span className="text-[11px] font-bold text-text-primary group-hover:text-brand-primary">Include RAW Data Ledger</span>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
                              
-                             <div className="space-y-3">
-                                <label className="text-tiny text-text-muted font-black tracking-[0.15em] uppercase">Entity Scoping</label>
+                             <div className="space-y-4">
+                                <label className="text-tiny text-text-muted font-black tracking-[0.2em] uppercase px-1">Audit scope</label>
                                 <div className="relative">
-                                   <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+                                   <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted rotate-90" />
                                    <input 
                                      type="text" 
-                                     placeholder="Search for specific Clients, Nodes, or Agents..."
-                                     className="input-field pl-12 h-14 bg-app-bg border-2 border-transparent focus:border-brand-primary focus:bg-card-bg"
+                                     placeholder="Filter by Node_ID, Agent_UID, or Category..."
+                                     className="w-full h-16 bg-app-bg/50 border-2 border-slate-800 rounded-2xl pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-brand-primary transition-all shadow-inner"
                                    />
                                 </div>
                              </div>
@@ -152,51 +236,97 @@ const ReportGenerator = ({ onNext }) => {
                     {step === 3 && (
                        <motion.div 
                          key="step3"
-                         initial={{ opacity: 0, x: 20 }}
-                         animate={{ opacity: 1, x: 0 }}
-                         exit={{ opacity: 0, x: -20 }}
-                         className="flex flex-col items-center justify-center flex-1 h-full text-center space-y-6 pb-20"
+                         initial={{ opacity: 0, scale: 0.95 }}
+                         animate={{ opacity: 1, scale: 1 }}
+                         exit={{ opacity: 0, scale: 1.05 }}
+                         className="flex flex-col flex-1 h-full space-y-8"
                        >
-                          <div className="p-8 bg-brand-primary/10 border border-brand-primary/20 rounded-full relative overflow-hidden group">
-                             <motion.div 
-                               animate={{ rotate: 360 }}
-                               transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-                               className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-                             />
-                             <div className="relative z-10 p-6 bg-brand-primary text-white rounded-full shadow-2xl shadow-brand-primary/40">
-                                <Download size={48} />
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-4">
+                                <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><Eye size={24} /></div>
+                                <div>
+                                   <h3 className="text-xl font-black tracking-tight uppercase">Render Preview</h3>
+                                   <p className="text-xs text-text-secondary font-medium mt-1">Simulated output matching configured parameters</p>
+                                </div>
+                             </div>
+                             <div className="flex gap-4">
+                                <button className="p-2.5 bg-app-bg border border-border-subtle rounded-xl text-text-muted hover:text-white transition-all"><RefreshCcw size={18} /></button>
+                                <button className="p-2.5 bg-app-bg border border-border-subtle rounded-xl text-text-muted hover:text-white transition-all"><Maximize2 size={18} /></button>
                              </div>
                           </div>
-                          <div className="space-y-2">
-                             <h3 className="text-2xl font-black tracking-tight">Generation Matrix Ready</h3>
-                             <p className="text-text-muted text-sm max-w-sm mx-auto leading-relaxed">
-                                All parameters have been validated through protocolTS-882. 
-                                Click below to start the neural render sequence.
-                             </p>
+                          
+                          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative group">
+                             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950/80 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                             
+                             {/* Mock Iframe Content */}
+                             <div className="w-full h-full p-12 overflow-y-auto space-y-8 bg-white selection:bg-brand-primary/20 text-slate-900 font-serif">
+                                <header className="border-b-4 border-slate-900 pb-8 flex justify-between items-end">
+                                   <div>
+                                      <h1 className="text-4xl font-black uppercase tracking-tight italic">TarkShastra Intel</h1>
+                                      <p className="text-sm font-bold mt-2 text-slate-500 tracking-widest uppercase">Protocol: {reportConfig.type} AUDIT</p>
+                                   </div>
+                                   <div className="text-right">
+                                      <p className="font-black text-lg">REP_{Math.floor(Math.random()*9000)+1000}</p>
+                                      <p className="text-[10px] font-bold text-slate-400">TIMESTAMP: {new Date().toISOString()}</p>
+                                   </div>
+                                </header>
+                                <section className="space-y-4 font-sans">
+                                   <h2 className="text-xl font-black uppercase tracking-wide border-l-8 border-brand-primary pl-4">Executive Extraction</h2>
+                                   <p className="text-sm leading-relaxed text-slate-600 font-medium">
+                                      Current telemetry data indicates a <strong>14.2% surge</strong> in P0 anomalies within the TS-8 Hardware Node. 
+                                      Mean recovery time has drifted to 2.4h, exceeding core SLA compliance by 12.5%.
+                                   </p>
+                                </section>
+                                {reportConfig.includeCharts && (
+                                   <section className="h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center">
+                                      <div className="text-center">
+                                         <TrendingUp className="mx-auto text-slate-300" size={48} />
+                                         <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest">Procedural Chart Matrix</p>
+                                      </div>
+                                   </section>
+                                )}
+                                <footer className="pt-12 text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em] text-center italic">
+                                   Verified Sovereign AI Audit — Vault-L8 Access Only
+                                </footer>
+                             </div>
                           </div>
                        </motion.div>
                     )}
                  </AnimatePresence>
 
-                 {/* Controls */}
-                 <div className="mt-auto pt-8 border-t border-border-subtle flex justify-between items-center bg-app-bg/30 -m-6 p-6 mt-8">
+                 {/* Wizard Control Strip */}
+                 <div className="mt-8 pt-6 border-t border-slate-800/50 flex justify-between items-center relative z-10">
                     {step > 1 ? (
-                      <button onClick={() => setStep(step - 1)} className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-text-muted hover:text-text-primary transition-colors uppercase tracking-widest">
-                         <ChevronLeft size={20} />
-                         REVISE STEP
+                      <button 
+                        onClick={() => setStep(step - 1)} 
+                        className="flex items-center gap-3 px-8 py-3.5 text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-white transition-all bg-slate-900/50 rounded-2xl border border-slate-800"
+                      >
+                         <ChevronLeft size={18} />
+                         Revise Sequence
                       </button>
-                    ) : <div />}
+                    ) : (
+                      <button 
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-3 px-8 py-3.5 text-[10px] font-black uppercase tracking-widest text-rose-500/70 hover:text-rose-500 transition-all bg-app-bg rounded-2xl border border-border-subtle"
+                      >
+                         <Trash2 size={16} />
+                         Abort Engineering
+                      </button>
+                    )}
                     
                     {step < 3 ? (
-                      <button onClick={() => setStep(step + 1)} className="btn-primary flex items-center gap-2 px-10 relative group">
-                         CONTINUE TO LOGIC
+                      <button 
+                        onClick={() => setStep(step + 1)} 
+                        className="btn-primary flex items-center gap-3 px-12 py-4 relative group rounded-2xl shadow-xl shadow-brand-primary/20"
+                      >
+                         Continue Sequence
                          <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                       </button>
                     ) : (
                       <button 
-                        onClick={startGeneration} 
+                        onClick={handleDownload} 
                         disabled={isGenerating}
-                        className="btn-primary flex items-center gap-3 px-10 relative overflow-hidden h-12 shadow-2xl shadow-brand-primary/30"
+                        className="btn-primary flex items-center gap-4 px-12 py-4 relative overflow-hidden rounded-2xl shadow-2xl shadow-brand-primary/40"
                       >
                          <AnimatePresence mode="wait">
                             {isGenerating ? (
@@ -208,7 +338,7 @@ const ReportGenerator = ({ onNext }) => {
                                  className="flex items-center gap-3"
                                >
                                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  <span className="font-black uppercase tracking-[0.2em] text-[10px]">Processing Matrix...</span>
+                                  <span className="font-black uppercase tracking-[0.2em] text-[10px]">Encrypting Vault Output...</span>
                                </motion.div>
                             ) : (
                                <motion.div 
@@ -216,10 +346,10 @@ const ReportGenerator = ({ onNext }) => {
                                  initial={{ y: 20, opacity: 0 }}
                                  animate={{ y: 0, opacity: 1 }}
                                  exit={{ y: -20, opacity: 0 }}
-                                 className="flex items-center gap-2"
+                                 className="flex items-center gap-3"
                                >
-                                  <Cpu size={18} />
-                                  <span className="font-extrabold uppercase">START NEURAL RENDER</span>
+                                  <Download size={20} />
+                                  <span className="font-extrabold uppercase tracking-widest">Finalize & Download</span>
                                </motion.div>
                             )}
                          </AnimatePresence>
@@ -229,60 +359,69 @@ const ReportGenerator = ({ onNext }) => {
               </div>
            </div>
 
-           {/* History Sidebar (4 cols) */}
+           {/* Performance Sidebar (4 cols) */}
            <div className="col-span-12 lg:col-span-4 flex flex-col gap-8">
               <div className="card space-y-6">
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                        <History size={18} className="text-brand-primary" />
-                       <h3 className="text-sm font-bold tracking-tight uppercase">Recent Exports</h3>
+                       <h3 className="text-sm font-bold tracking-tight uppercase">Engineering History</h3>
                     </div>
-                    <button className="text-[10px] font-black uppercase text-brand-primary hover:underline">Clean All</button>
+                    <button className="text-[10px] font-black uppercase text-brand-primary hover:underline">Flush Cache</button>
                  </div>
                  
                  <div className="space-y-4">
                     {history.map(item => (
-                       <div key={item.id} className="p-4 bg-app-bg border border-border-subtle rounded-2xl group transition-all hover:border-brand-primary/30">
-                          <div className="flex justify-between items-start mb-3">
-                             <div>
-                                <h4 className="text-xs font-bold text-text-primary">{item.type}</h4>
-                                <p className="text-[10px] text-text-muted mt-0.5">{item.date}</p>
-                             </div>
-                             <button className="p-1 hover:bg-card-bg rounded transition-colors text-text-muted"><MoreVertical size={14} /></button>
+                       <div key={item.id} className="p-5 bg-app-bg border border-border-subtle rounded-3xl group transition-all hover:border-brand-primary/30 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                             <FileText size={40} />
                           </div>
-                          <div className="flex justify-between items-center pt-3 border-t border-border-subtle/50">
-                             <div className="flex gap-2">
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${item.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/10' : 'bg-slate-200 text-slate-500'}`}>{item.status}</span>
-                                <span className="text-[9px] font-mono text-text-muted p-0.5">{item.size}</span>
+                          <div className="flex justify-between items-start mb-4 relative z-10">
+                             <div>
+                                <h4 className="text-xs font-black text-text-primary uppercase tracking-tight">{item.type}</h4>
+                                <p className="text-[10px] text-text-muted mt-1 font-medium">{item.date}</p>
                              </div>
-                             <button className="p-2 bg-card-bg rounded-lg text-text-muted hover:text-brand-primary shadow-sm hover:scale-110 transition-transform"><Download size={14} /></button>
+                             <button className="p-2 hover:bg-card-bg rounded-xl transition-colors text-text-muted"><MoreVertical size={16} /></button>
+                          </div>
+                          <div className="flex justify-between items-center pt-4 border-t border-border-subtle relative z-10">
+                             <div className="flex gap-2">
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm border ${
+                                  item.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-200/5 text-slate-500 border-slate-700/50'
+                                }`}>
+                                  {item.status}
+                                </span>
+                                <span className="text-[10px] font-mono text-text-muted font-bold self-center">{item.size}</span>
+                             </div>
+                             <button className="p-2.5 bg-card-bg border border-border-subtle rounded-xl text-text-muted hover:text-brand-primary shadow-sm hover:scale-110 transition-all active:scale-95"><Download size={16} /></button>
                           </div>
                        </div>
                     ))}
                  </div>
               </div>
 
-              <div className="card border-brand-primary/20 bg-brand-primary/5 space-y-4 shadow-xl shadow-brand-primary/5">
-                 <div className="flex items-center gap-3 text-brand-primary">
-                    <ShieldCheck size={20} />
-                    <h3 className="text-sm font-bold tracking-tight uppercase">Access Control</h3>
+              <div className="card border-brand-primary/20 bg-brand-primary/5 space-y-6 shadow-2xl shadow-brand-primary/5 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 p-6 text-brand-primary opacity-10 group-hover:scale-125 transition-transform duration-1000">
+                    <ShieldCheck size={100} />
                  </div>
-                 <p className="text-xs text-text-secondary leading-relaxed opacity-90">
-                    Intelligence reports are encrypted with your <strong>System Authority SHA</strong>. 
-                    Redistribution outside the <strong>Vault-S6</strong> is strictly logged.
+                 <div className="flex items-center gap-3 text-brand-primary relative z-10">
+                    <ShieldCheck size={20} />
+                    <h3 className="text-sm font-black tracking-widest uppercase">Encryption Access</h3>
+                 </div>
+                 <p className="text-xs text-text-secondary leading-relaxed font-medium relative z-10">
+                    Intelligence reports are shredded 7 days post-generation. Output is encrypted with <strong>TS-ROOT-SHA</strong> signatures. 
                  </p>
-                 <button className="flex items-center gap-2 text-[10px] font-black uppercase text-brand-primary group">
-                    View Access Log
-                    <ExternalLink size={12} className="group-hover:scale-125 transition-transform" />
+                 <button className="flex items-center gap-2 text-[10px] font-black uppercase text-brand-primary group relative z-10">
+                    Identity Protocol Access Log
+                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                  </button>
               </div>
 
-              <div className="card !p-0 overflow-hidden bg-app-bg border-dashed text-text-primary">
-                 <div className="p-6 bg-amber-500/10 flex items-center gap-4 text-amber-700">
-                    <Clock size={24} />
+              <div className="card !p-0 overflow-hidden bg-app-bg border-dashed text-text-primary group">
+                 <div className="p-6 bg-amber-500/5 flex items-center gap-5 transition-colors group-hover:bg-amber-500/10">
+                    <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl"><Clock size={28} className="animate-spin-slow" /></div>
                     <div>
-                       <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Auto-Purge Alert</p>
-                       <p className="text-[10px] font-medium opacity-70">Next cycle in 14h 22m</p>
+                       <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600/60">Cache Auto-Purge</p>
+                       <p className="text-sm font-black tracking-tight mt-0.5">Purge Cycle: <span className="text-amber-600">14h 22m</span></p>
                     </div>
                  </div>
               </div>
@@ -294,10 +433,16 @@ const ReportGenerator = ({ onNext }) => {
   );
 };
 
-// Internal History Icon helper
+// Internal icon and style helpers
 const History = ({ size, className }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+  </svg>
+);
+
+const Maximize2 = ({ size, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
   </svg>
 );
 
