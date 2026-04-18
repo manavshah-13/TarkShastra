@@ -5,3 +5,9 @@ __pycache__/
 node_modules/
 dist/
 build/
+*.pyc
+*.pyo
+*.pkl
+*.joblib
+*.db
+*.csv
