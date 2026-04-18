@@ -1,11 +1,11 @@
+<<<<<<< HEAD
 venv/
 .env
 **/__pycache__/
-*.joblib
 __pycache__/
 node_modules/
 dist/
 build/
-.vscode/
-.idea/
-.DS_Store
+=======
+venv
+>>>>>>> 56961924 (bugs fixed)
