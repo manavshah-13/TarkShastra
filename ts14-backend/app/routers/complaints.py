@@ -1,0 +1,98 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from datetime import datetime
+from app.core.database import get_db
+from app.models.complaint import Complaint as ComplaintModel, ComplaintStatus, Priority
+from app.schemas.complaint import Complaint, ComplaintCreate, ComplaintUpdate
+from app.services.ai_service import ai_service
+from app.routers.auth import get_current_user
+from app.models.user import User as UserModel, UserRole
+
+router = APIRouter(prefix="/complaints", tags=["complaints"])
+
+@router.post("/", response_model=Complaint)
+async def create_complaint(complaint_in: ComplaintCreate, db: Session = Depends(get_db)):
+    # Trigger AI classification
+    analysis = ai_service.analyze_text(complaint_in.description)
+    
+    db_complaint = ComplaintModel(
+        **complaint_in.model_dump(),
+        category=analysis.category,
+        priority=analysis.priority,
+        ai_confidence=analysis.confidence
+    )
+    db.add(db_complaint)
+    db.commit()
+    db.refresh(db_complaint)
+    return db_complaint
+
+@router.get("/", response_model=List[Complaint])
+async def list_complaints(
+    status: Optional[ComplaintStatus] = None,
+    priority: Optional[Priority] = None,
+    category: Optional[str] = None,
+    assigned_to: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(ComplaintModel).filter(ComplaintModel.soft_deleted == None)
+    if status:
+        query = query.filter(ComplaintModel.status == status)
+    if priority:
+        query = query.filter(ComplaintModel.priority == priority)
+    if category:
+        query = query.filter(ComplaintModel.category == category)
+    if assigned_to:
+        query = query.filter(ComplaintModel.assigned_to == assigned_to)
+    
+    return query.all()
+
+@router.get("/{id}", response_model=Complaint)
+async def get_complaint(id: int, db: Session = Depends(get_db)):
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return complaint
+
+@router.patch("/{id}/status", response_model=Complaint)
+async def update_status(id: int, status_in: ComplaintStatus, db: Session = Depends(get_db)):
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    
+    complaint.status = status_in
+    if status_in == ComplaintStatus.RESOLVED:
+        complaint.resolved_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
+@router.patch("/{id}/assign", response_model=Complaint)
+async def assign_complaint(id: int, user_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+        raise HTTPException(status_code=403, detail="Not authorized to assign complaints")
+    
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    
+    complaint.assigned_to = user_id
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
+@router.delete("/{id}")
+async def delete_complaint(id: int, db: Session = Depends(get_db)):
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    
+    complaint.soft_deleted = datetime.utcnow()
+    db.commit()
+    return {"detail": "Complaint soft deleted"}
+
+@router.get("/export")
+async def export_complaints(db: Session = Depends(get_db)):
+    # Placeholder for CSV/Excel export
+    return {"detail": "Export functionality not yet implemented"}

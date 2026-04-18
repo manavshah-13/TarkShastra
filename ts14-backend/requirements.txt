@@ -1,0 +1,22 @@
+fastapi
+uvicorn[standard]
+email-validator
+sqlalchemy
+psycopg2-binary
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+scikit-learn
+shap
+pandas
+numpy
+httpx
+python-dotenv
+alembic
+pytest
+openpyxl
+aiofiles
+python-multipart
+# For SSE
+sse-starlette
