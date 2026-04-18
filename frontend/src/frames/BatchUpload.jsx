@@ -127,8 +127,7 @@ const BatchUpload = () => {
   };
 
   return (
-    <AppLayout activePage="Complaints">
-      <div className="max-w-[1600px] mx-auto space-y-8 pb-12 text-text-primary">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12 text-text-primary">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
              <p className="text-tiny text-text-muted underline decoration-brand-primary decoration-2 underline-offset-4 font-black">TarkShastra Ingest Portal</p>
@@ -362,7 +361,7 @@ const BatchUpload = () => {
 
         </div>
       </div>
-    </AppLayout>
+
   );
 };
 

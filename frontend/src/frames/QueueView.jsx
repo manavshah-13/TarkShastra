@@ -139,8 +139,7 @@ const QueueView = () => {
   const hasActiveFilters = searchTerm || statusFilter || categoryFilter;
 
   return (
-    <AppLayout activePage="Queue">
-      <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">Master Complaint Ledger</h1>
@@ -323,7 +322,6 @@ const QueueView = () => {
            ))}
         </div>
       </div>
-    </AppLayout>
   );
 };
 

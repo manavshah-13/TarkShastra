@@ -5,101 +5,123 @@ from functools import lru_cache
 from app.core.config import settings
 from app.schemas.complaint import ComplaintAnalysisResult, Priority
 
+import joblib
+import os
+import json
+import re
+import numpy as np
+import pandas as pd
+from collections import Counter
+from functools import lru_cache
+from app.core.config import settings
+from app.schemas.complaint import ComplaintAnalysisResult, Priority
+
 class AIService:
     def __init__(self):
-        self.model = None
-        self.vectorizer = None
-        self.load_model()
+        self.cat_model = None
+        self.pri_model = None
+        self.res_model = None
+        self.knn_model = None
+        self.rec_prep = None
+        self.sentiment_map = {'negative': 0, 'neutral': 1, 'positive': 2}
+        
+        # Paths relative to the root of the project
+        self.root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        self.load_models()
 
-    def load_model(self):
-        if os.path.exists(settings.AI_MODEL_PATH):
-            try:
-                with open(settings.AI_MODEL_PATH, "rb") as f:
-                    data = pickle.load(f)
-                    self.model = data.get("model")
-                    self.vectorizer = data.get("vectorizer")
-            except Exception as e:
-                print(f"Error loading model: {e}")
-        else:
-            print(f"Model file not found at {settings.AI_MODEL_PATH}")
+    def load_models(self):
+        try:
+            self.cat_model = joblib.load(os.path.join(self.root_dir, 'category_model.joblib'))
+            self.pri_model = joblib.load(os.path.join(self.root_dir, 'priority_model.joblib'))
+            self.res_model = joblib.load(os.path.join(self.root_dir, 'resolution_model.joblib'))
+            self.knn_model = joblib.load(os.path.join(self.root_dir, 'knn_model.joblib'))
+            self.rec_prep = joblib.load(os.path.join(self.root_dir, 'rec_prep.joblib'))
+            print("Successfully loaded all AI models.")
+        except Exception as e:
+            print(f"Error loading models: {e}")
 
     @lru_cache(maxsize=1024)
-    def classify(self, text: str) -> ComplaintAnalysisResult:
+    def classify(self, text: str, sentiment: str = 'neutral') -> ComplaintAnalysisResult:
         """
-        Classifies the complaint text using the AI model.
+        Classifies the complaint text using the loaded AI models and generates recommendations.
         """
-        # Run the model (Fallback/Placeholder logic)
-        # Note: In a real implementation, you would use:
-        # input_vec = self.vectorizer.transform([text])
-        # prediction = self.model.predict(input_vec)
+        if not self.cat_model:
+            # Fallback
+            return ComplaintAnalysisResult(
+                category="General",
+                priority=Priority.MEDIUM,
+                confidence=0.5,
+                recommended_action="Manual Review",
+                explanation="AI model not initialized.",
+                estimated_resolution_days=3.0
+            )
+
+        # Prepare temporary dataframe for prediction
+        temp_df = pd.DataFrame([{
+            'text': text,
+            'text_clean': re.sub(r'\b(packaging|product|trade)\b', '', text.lower(), flags=re.I),
+            'sentiment': sentiment,
+            'sentiment_num': self.sentiment_map.get(sentiment.lower(), 1),
+            'text_len': len(text),
+            'exclamation_count': text.count('!'),
+            'urgent_words': int(bool(re.search(r'\b(urgent|asap|immediately|critical)\b', text, re.I))),
+            'has_days': int(bool(re.search(r'\b\d+\s*day', text, re.I))),
+            'has_weeks': int(bool(re.search(r'\b\d+\s*week', text, re.I)))
+        }])
+
+        # 1. Category Prediction
+        category = self.cat_model.predict(temp_df)[0]
         
-        category = "Billing" if "bill" in text.lower() or "price" in text.lower() else "General Inquiry"
-        priority = Priority.HIGH if "urgent" in text.lower() or "broken" in text.lower() else Priority.MEDIUM
-        confidence = 0.85
+        # 2. Priority Prediction
+        priority_raw = self.pri_model.predict(temp_df)[0]
+        # Map model output to Priority enum if necessary
+        priority = Priority.HIGH if priority_raw in ['P0', 'P1', 'High'] else Priority.MEDIUM
         
-        result = ComplaintAnalysisResult(
+        # 3. Resolution Time Prediction (Log scale expected from model.py)
+        res_log = self.res_model.predict(temp_df)[0]
+        resolution_days = float(np.expm1(res_log))
+        
+        # 4. Explainable Recommendation using KNN
+        tfidf_vec = self.rec_prep.transform(temp_df)
+        distances, indices = self.knn_model.kneighbors(tfidf_vec)
+        
+        try:
+            # Read the CSV to get historical resolution actions
+            csv_path = os.path.join(self.root_dir, 'TS-PS14.csv')
+            live_df = pd.read_csv(csv_path)
+            neighbors_resolutions = live_df['resolution_action'].iloc[indices[0]].values
+            
+            common_results = Counter(neighbors_resolutions).most_common(1)
+            if not common_results:
+                recommended_action = "Manual Review"
+                explanation = "Historical consensus could not be established."
+                confidence = 0.5
+            else:
+                most_common_res, count = common_results[0]
+                confidence = float(count / 5.0)
+                if count < 3:
+                    recommended_action = 'Escalate to supervisor'
+                    explanation = f"We suggested 'Escalate to supervisor' because no clear consensus (<3 cases) was found among past similar cases."
+                else:
+                    recommended_action = most_common_res
+                    explanation = f"We suggested '{most_common_res}' because {confidence*100:.0f}% ({count} out of 5) of similar past cases used it."
+        except Exception as e:
+            print(f"Error in recommendation logic: {e}")
+            recommended_action = "Manual Review"
+            explanation = "Failed to retrieve historical consensus."
+            confidence = 0.5
+
+        return ComplaintAnalysisResult(
             category=category,
             priority=priority,
-            confidence=confidence
+            confidence=confidence,
+            recommended_action=recommended_action,
+            explanation=explanation,
+            estimated_resolution_days=round(resolution_days, 1)
         )
-
-        return result
 
     def analyze_text(self, text: str) -> ComplaintAnalysisResult:
         """Alias for classify to maintain compatibility."""
         return self.classify(text)
 
 ai_service = AIService()
-
-# import pickle
-# import os
-# import json
-# from functools import lru_cache
-# from app.core.config import settings
-# from app.schemas.complaint import ComplaintAnalysisResult, Priority
-
-# class AIService:
-#     def __init__(self):
-#         self.model = None
-#         self.vectorizer = None
-#         self.load_model()
-
-#     def load_model(self):
-#         if os.path.exists(settings.AI_MODEL_PATH):
-#             try:
-#                 with open(settings.AI_MODEL_PATH, "rb") as f:
-#                     data = pickle.load(f)
-#                     self.model = data.get("model")
-#                     self.vectorizer = data.get("vectorizer")
-#             except Exception as e:
-#                 print(f"Error loading model: {e}")
-#         else:
-#             print(f"Model file not found at {settings.AI_MODEL_PATH}")
-
-#     @lru_cache(maxsize=1024)
-#     def classify(self, text: str) -> ComplaintAnalysisResult:
-#         """
-#         Classifies the complaint text using the AI model.
-#         """
-#         # Run the model (Fallback/Placeholder logic)
-#         # Note: In a real implementation, you would use:
-#         # input_vec = self.vectorizer.transform([text])
-#         # prediction = self.model.predict(input_vec)
-        
-#         category = "Billing" if "bill" in text.lower() or "price" in text.lower() else "General Inquiry"
-#         priority = Priority.HIGH if "urgent" in text.lower() or "broken" in text.lower() else Priority.MEDIUM
-#         confidence = 0.85
-        
-#         result = ComplaintAnalysisResult(
-#             category=category,
-#             priority=priority,
-#             confidence=confidence
-#         )
-
-#         return result
-
-#     def analyze_text(self, text: str) -> ComplaintAnalysisResult:
-#         """Alias for classify to maintain compatibility."""
-#         return self.classify(text)
-
-# ai_service = AIService()

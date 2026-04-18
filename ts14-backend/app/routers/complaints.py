@@ -20,7 +20,10 @@ async def create_complaint(complaint_in: ComplaintCreate, db: Session = Depends(
         **complaint_in.model_dump(),
         category=analysis.category,
         priority=analysis.priority,
-        ai_confidence=analysis.confidence
+        ai_confidence=analysis.confidence,
+        recommended_action=analysis.recommended_action,
+        recommendation_explanation=analysis.explanation,
+        estimated_resolution_days=analysis.estimated_resolution_days
     )
     db.add(db_complaint)
     db.commit()

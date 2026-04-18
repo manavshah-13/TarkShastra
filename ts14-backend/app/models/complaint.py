@@ -25,6 +25,9 @@ class Complaint(Base):
     priority = Column(Enum(Priority), default=Priority.MEDIUM)
     status = Column(Enum(ComplaintStatus), default=ComplaintStatus.NEW)
     ai_confidence = Column(Float)
+    recommended_action = Column(String, nullable=True)
+    recommendation_explanation = Column(Text, nullable=True)
+    estimated_resolution_days = Column(Float, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

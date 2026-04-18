@@ -230,8 +230,7 @@ const SLAMonitor = () => {
   };
 
   return (
-    <AppLayout activePage="Monitoring">
-      <div className="max-w-[1700px] mx-auto space-y-8 pb-12 text-text-primary">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12 text-text-primary">
         
         {/* Critical Banner */}
         <AnimatePresence>
@@ -404,10 +403,9 @@ const SLAMonitor = () => {
                 <CircleCheck size={24} />
                 <Maximize2 size={24} />
              </div>
-          </div>
+            </div>
         </div>
       </div>
-    </AppLayout>
   );
 };
 

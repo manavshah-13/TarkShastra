@@ -125,8 +125,7 @@ const QAAnalytics = () => {
   const COLORS = ['#10B981', '#3B82F6', '#EF4444'];
 
   return (
-    <AppLayout activePage="QA">
-      <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">Quality Assurance Intelligence</h1>
@@ -342,7 +341,6 @@ const QAAnalytics = () => {
            </div>
         </div>
       </div>
-    </AppLayout>
   );
 };
 

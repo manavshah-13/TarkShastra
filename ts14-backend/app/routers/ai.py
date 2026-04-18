@@ -15,7 +15,7 @@ async def get_explanation(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Complaint not found")
     
     # In real world, we pass the text to SHAP utility
-    explanation = get_shap_explanation(ai_service.model, ai_service.vectorizer, complaint.description)
+    explanation = get_shap_explanation(ai_service.cat_model, ai_service.rec_prep, complaint.description)
     return explanation
 
 @router.post("/analyze-text", response_model=ComplaintAnalysisResult)
