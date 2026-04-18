@@ -1,5 +1,5 @@
 venv/
-.env
+ts14-backend/.env
 **/__pycache__/
 *.joblib
 __pycache__/
