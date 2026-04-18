@@ -34,6 +34,24 @@ def seed():
                 "username": "analyst",
                 "email": "analyst@tarkshastra.io",
                 "password": "analyst123",
+                "role": UserRole.ANALYST
+            },
+            {
+                "username": "sarah_j",
+                "email": "sarah.j@tarkshastra.io",
+                "password": "agent123",
+                "role": UserRole.USER
+            },
+            {
+                "username": "marcus_t",
+                "email": "marcus.t@tarkshastra.io",
+                "password": "agent123",
+                "role": UserRole.USER
+            },
+            {
+                "username": "elena_r",
+                "email": "elena.r@tarkshastra.io",
+                "password": "agent123",
                 "role": UserRole.USER
             }
         ]

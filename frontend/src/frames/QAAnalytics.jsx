@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import AppLayout from '../components/AppLayout';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   BarChart, Bar, Legend, Cell, PieChart, Pie
 } from 'recharts';
@@ -67,7 +67,7 @@ const QAAnalytics = () => {
   const fetchQAStats = async () => {
     setLoading(true);
     try {
-      const data = await api.get(`/analytics/qa?range=${timeRange}`);
+      const data = await api.get('/analytics/qa');
       setStats(data);
       // Show alert if accuracy < 90%
       if (data && data.accuracy < 0.9) {
@@ -77,7 +77,7 @@ const QAAnalytics = () => {
       console.error('Failed to fetch QA stats', err);
       // Mock data for demo
       setStats({
-        accuracy: 0.992,
+        accuracy: 0.92,
         labelConsistency: 0.982,
         modelDrift: 0.008,
         latency: 142,
@@ -125,6 +125,7 @@ const QAAnalytics = () => {
   const COLORS = ['#10B981', '#3B82F6', '#EF4444'];
 
   return (
+    <AppLayout>
     <div className="max-w-[1600px] mx-auto space-y-8 pb-12">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
@@ -341,6 +342,7 @@ const QAAnalytics = () => {
            </div>
         </div>
       </div>
+    </AppLayout>
   );
 };
 

@@ -143,10 +143,16 @@ const ComplaintDetails = () => {
   const handleStatusChange = async (newStatus) => {
     setIsSubmitting(true);
     try {
-      await api.patch(`/complaints/${id}/status`, newStatus);
+      // Map UI status to API enum
+      const statusMap = {
+        'new': 'new',
+        'in_progress': 'in_progress', 
+        'resolved': 'resolved'
+      };
+      await api.patch(`/complaints/${id}/status`, { status: statusMap[newStatus] || newStatus });
       setComplaint({ ...complaint, status: newStatus });
       setShowResolveModal(false);
-      if (newStatus === 'RESOLVED') {
+      if (newStatus === 'resolved') {
         setTimeout(() => navigate('/queue'), 1500);
       }
     } catch (err) {

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.routers import auth, complaints, ai, batch, analytics, stream, admin
+from app.routers import auth, complaints, ai, batch, analytics, stream, admin, sla, reports
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -31,6 +31,8 @@ app.include_router(batch.router)
 app.include_router(analytics.router)
 app.include_router(stream.router)
 app.include_router(admin.router)
+app.include_router(sla.router)
+app.include_router(reports.router)
 
 @app.get("/")
 async def root():

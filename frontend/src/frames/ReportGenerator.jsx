@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,7 +20,9 @@ import {
   MoreVertical,
   Clock,
   Eye,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCcw,
+  TrendingUp
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -47,6 +49,7 @@ const ReportGenerator = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [reportHistory, setReportHistory] = useState([]);
   const [reportConfig, setReportConfig] = useState({
     type: 'Summary',
     format: 'PDF',
@@ -55,35 +58,138 @@ const ReportGenerator = () => {
     range: 'L-7D'
   });
 
+  const CACHE_KEY = 'tarkshastra_reports_cache';
+
+  const getCachedReports = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveReportToCache = (report) => {
+    try {
+      const cached = getCachedReports();
+      const newReport = {
+        ...report,
+        cachedAt: new Date().toISOString()
+      };
+      cached.unshift(newReport);
+      // Keep only last 20 reports
+      const limited = cached.slice(0, 20);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(limited));
+      setReportHistory(limited);
+    } catch (err) {
+      console.error('Failed to save to cache:', err);
+    }
+  };
+
+  const flushCache = () => {
+    if (confirm('Flush all cached reports? This cannot be undone.')) {
+      localStorage.removeItem(CACHE_KEY);
+      setReportHistory([]);
+    }
+  };
+
+  const downloadFromCache = (report) => {
+    if (!report.content) return;
+    
+    let blob;
+    if (report.content_type === 'application/pdf') {
+      const binaryString = window.atob(report.content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      blob = new Blob([bytes], { type: 'application/pdf' });
+    } else {
+      blob = new Blob([report.content], { type: 'text/csv' });
+    }
+    
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = report.url.split('/').pop() || `${report.id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  useEffect(() => {
+    setReportHistory(getCachedReports());
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await api.get('/reports').catch(() => ({ reports: [] }));
+      setReportHistory(res.reports || []);
+    } catch (err) {
+      console.error('Failed to fetch report history', err);
+    }
+  };
+
   const startGeneration = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setStep(3);
-    }, 2500);
+    setStep(3);
   };
 
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-      // Mock signed URL generation
-      const res = await api.post('/reports/generate', reportConfig).catch(() => ({ url: '#' }));
-      console.log('Generating signed URL...', res.url);
+      const res = await api.post('/reports/generate', reportConfig);
+      console.log('Report generated:', res);
+      
+      if (res.content) {
+        let blob;
+        const filename = res.url.split('/').pop() || `${res.id}.csv`;
+
+        if (res.content_type === 'application/pdf') {
+          // Decode Base64 to binary
+          const binaryString = window.atob(res.content);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          blob = new Blob([bytes], { type: 'application/pdf' });
+        } else {
+          blob = new Blob([res.content], { type: 'text/csv' });
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+
       setTimeout(() => {
         setIsGenerating(false);
-        // Simulate download
-        alert('Download initiated via secure signed URL.');
-      }, 1500);
+        // Save to cache after successful download
+        saveReportToCache({
+          id: res.id,
+          type: res.template || reportConfig.type,
+          date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+          size: res.size,
+          status: res.status,
+          content: res.content,
+          content_type: res.content_type,
+          url: res.url,
+          format: reportConfig.format
+        });
+      }, 1000);
     } catch (err) {
       console.error('Report generation failed', err);
       setIsGenerating(false);
+      alert('Security Protocol: Report generation rejected by vault.');
     }
   };
-
-  const history = [
-    { id: 'REP-X001', type: 'System Audit', date: 'Mar 12, 09:44 AM', size: '2.4 MB', status: 'Ready' },
-    { id: 'REP-Y882', type: 'SLA Analysis', date: 'Mar 11, 04:12 PM', size: '1.1 MB', status: 'Archived' },
-  ];
 
   return (
     <div className="max-w-[1500px] mx-auto space-y-8 pb-12 text-text-primary">
@@ -366,11 +472,11 @@ const ReportGenerator = () => {
                        <History size={18} className="text-brand-primary" />
                        <h3 className="text-sm font-bold tracking-tight uppercase">Engineering History</h3>
                     </div>
-                    <button className="text-[10px] font-black uppercase text-brand-primary hover:underline">Flush Cache</button>
+                    <button onClick={flushCache} className="text-[10px] font-black uppercase text-brand-primary hover:underline">Flush Cache</button>
                  </div>
                  
                  <div className="space-y-4">
-                    {history.map(item => (
+                    {reportHistory.map(item => (
                        <div key={item.id} className="p-5 bg-app-bg border border-border-subtle rounded-3xl group transition-all hover:border-brand-primary/30 relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-10 transition-opacity">
                              <FileText size={40} />
@@ -391,7 +497,7 @@ const ReportGenerator = () => {
                                 </span>
                                 <span className="text-[10px] font-mono text-text-muted font-bold self-center">{item.size}</span>
                              </div>
-                             <button className="p-2.5 bg-card-bg border border-border-subtle rounded-xl text-text-muted hover:text-brand-primary shadow-sm hover:scale-110 transition-all active:scale-95"><Download size={16} /></button>
+                             <button onClick={() => downloadFromCache(item)} className="p-2.5 bg-card-bg border border-border-subtle rounded-xl text-text-muted hover:text-brand-primary shadow-sm hover:scale-110 transition-all active:scale-95"><Download size={16} /></button>
                           </div>
                        </div>
                     ))}

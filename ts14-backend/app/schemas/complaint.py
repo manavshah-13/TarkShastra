@@ -11,7 +11,8 @@ class ComplaintCreate(ComplaintBase):
     pass
 
 class ComplaintStatusUpdate(BaseModel):
-    status: ComplaintStatus
+    status: Optional[ComplaintStatus] = None
+    assigned_to: Optional[int] = None
 
 class ComplaintUpdate(BaseModel):
     title: Optional[str] = None

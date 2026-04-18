@@ -72,7 +72,7 @@ async def update_status(id: int, status_update: ComplaintStatusUpdate, db: Sessi
     return complaint
 
 @router.patch("/{id}/assign", response_model=Complaint)
-async def assign_complaint(id: int, user_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+async def assign_complaint(id: int, assignment: ComplaintStatusUpdate, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
         raise HTTPException(status_code=403, detail="Not authorized to assign complaints")
     
@@ -80,7 +80,7 @@ async def assign_complaint(id: int, user_id: int, current_user: UserModel = Depe
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
     
-    complaint.assigned_to = user_id
+    complaint.assigned_to = assignment.assigned_to
     db.commit()
     db.refresh(complaint)
     return complaint

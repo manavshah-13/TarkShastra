@@ -256,31 +256,15 @@ const ManagerOverview = () => {
         api.get('/complaints?status=new&limit=5').catch(() => ({ items: [] }))
       ]);
 
-      const mockMembers = [
-        { id: 1, name: 'Alex Rivera', role: 'Ops Lead', load: 85, performance: 94, caseCount: 12, complexity: 7.2, color: '#3B82F6', online: true },
-        { id: 2, name: 'Sarah Jenkins', role: 'Specialist', load: 92, performance: 88, caseCount: 15, complexity: 6.8, color: '#8B5CF6', online: true },
-        { id: 3, name: 'Marcus Thompson', role: 'Sr Auditor', load: 45, performance: 98, caseCount: 8, complexity: 8.5, color: '#F59E0B', online: false },
-        { id: 4, name: 'Elena Rodriguez', role: 'Agent T2', load: 68, performance: 91, caseCount: 4, complexity: 5.9, color: '#10B981', online: true },
-        { id: 5, name: 'David Chen', role: 'Agent T1', load: 74, performance: 85, caseCount: 3, complexity: 4.2, color: '#EC4899', online: true },
-        { id: 6, name: 'Sophie Miller', role: 'Comp Lead', load: 32, performance: 99, caseCount: 2, complexity: 9.1, color: '#06B6D4', online: false },
-      ];
-
-      setTeam(teamRes.members?.length ? teamRes.members : mockMembers);
-      setUnassigned(unassignedRes.items?.length ? unassignedRes.items : [
-        { id: '892', title: 'Critical Power Anomaly', priority: 'P0', category: 'Hardware' },
-        { id: '895', title: 'Neural Buffer Overflow', priority: 'P1', category: 'Software' },
-        { id: '899', title: 'Legacy Vault Cleanup', priority: 'P2', category: 'Infrastructure' },
-      ]);
-
-      setStats(teamRes.stats || {
-        slaCompliance: 87,
-        crisisAlerts: [
-          { id: 1, type: 'unassigned', title: 'Unassigned Critical Breach', description: 'CMP-892 (Priority P0) has been unassigned for 45 minutes.', severity: 'critical' },
-          { id: 2, type: 'overload', title: 'Agent Overload Alert', description: 'Sarah Jenkins is at 95% capacity with 3 P0 cases.', severity: 'warning' }
-        ]
-      });
+      setTeam(teamRes.members || []);
+      setUnassigned(unassignedRes.items || []);
+      setStats(teamRes.stats || { slaCompliance: 92, crisisAlerts: [] });
     } catch (err) {
       console.error('Failed to fetch data', err);
+      // Safer fallback for state
+      setTeam([]);
+      setUnassigned([]);
+      setStats({ slaCompliance: 92, crisisAlerts: [] });
     } finally {
       setLoading(false);
     }
@@ -292,6 +276,7 @@ const ManagerOverview = () => {
       await fetchData();
     } catch (err) {
       console.error('Reassignment failed', err);
+      alert('Failed to reassign. Please try again.');
     }
   };
 
@@ -387,10 +372,10 @@ const ManagerOverview = () => {
                     <AlertTriangle size={18} />
                     <h4 className="text-xs font-black uppercase tracking-widest">Active Breach Risk Feed</h4>
                  </div>
-                 <span className="text-[10px] font-mono font-bold text-rose-500">{stats.crisisAlerts.length} PROTOCOLS_CRITICAL</span>
+                 <span className="text-[10px] font-mono font-bold text-rose-500">{stats.crisisAlerts?.length || 0} PROTOCOLS_CRITICAL</span>
               </div>
               <div className="divide-y divide-border-subtle">
-                 {stats.crisisAlerts.map(alert => (
+                 {stats.crisisAlerts?.map(alert => (
                    <div key={alert.id} className="p-5 flex items-center justify-between group hover:bg-rose-500/5 transition-all cursor-pointer" onClick={() => navigate('/sla')}>
                       <div className="flex items-center gap-5">
                          <div className="w-10 h-10 rounded-xl bg-card-bg border border-rose-500/20 flex items-center justify-center shadow-sm">

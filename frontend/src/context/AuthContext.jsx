@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 export const ROLES = {
   EXECUTIVE: 'admin',
   MANAGER: 'manager',
-  QA: 'analyst',
+  QA: 'user',
 };
 
 export const getDefaultRouteForRole = (role) => {

@@ -28,7 +28,7 @@ import { Sun, Moon } from 'lucide-react';
 const ROLES = {
   EXECUTIVE: 'admin',
   MANAGER: 'manager',
-  QA: 'analyst',
+  QA: 'user',
 };
 
 const getDefaultRouteForRole = (role) => {
@@ -268,17 +268,17 @@ function AppContent({ theme, toggleTheme }) {
 
           {/* QA Routes */}
           <Route path="/qa" element={
-            <ProtectedRoute allowedRoles={[ROLES.QA, ROLES.MANAGER]}>
+            <ProtectedRoute allowedRoles={[ROLES.QA, ROLES.MANAGER, ROLES.EXECUTIVE]}>
               <QAAnalytics />
             </ProtectedRoute>
           } />
           <Route path="/qa/review" element={
-            <ProtectedRoute allowedRoles={[ROLES.QA]}>
+            <ProtectedRoute allowedRoles={[ROLES.QA, ROLES.MANAGER, ROLES.EXECUTIVE]}>
               <ClassificationReview />
             </ProtectedRoute>
           } />
           <Route path="/qa/trends" element={
-            <ProtectedRoute allowedRoles={[ROLES.QA, ROLES.MANAGER]}>
+            <ProtectedRoute allowedRoles={[ROLES.QA, ROLES.MANAGER, ROLES.EXECUTIVE]}>
               <ReportingStudio />
             </ProtectedRoute>
           } />

@@ -22,7 +22,8 @@ import {
   MoreVertical,
   CheckSquare,
   Square,
-  ArrowUpRight
+  ArrowUpRight,
+  Plus
 } from 'lucide-react';
 
 const ContextMenu = ({ x, y, options, onClose }) => {
@@ -58,7 +59,7 @@ const CountdownTile = ({ complaint, onClick, onAction, isSelected, onSelect }) =
   useEffect(() => {
     const update = () => {
       const created = new Date(complaint.created_at);
-      const deadline = new Date(created.getTime() + (complaint.priority === 'P0' ? 4 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
+      const deadline = new Date(created.getTime() + ((complaint.priority === 'urgent' || complaint.priority === 'P0') ? 4 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
       const now = new Date();
       const diff = deadline - now;
 
@@ -192,9 +193,11 @@ const SLAMonitor = () => {
   const [criticalItems, setCriticalItems] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [agents, setAgents] = useState([]);
 
   useEffect(() => {
     fetchSLAData();
+    fetchAgents();
     const interval = setInterval(fetchSLAData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -203,15 +206,7 @@ const SLAMonitor = () => {
     setRefreshing(true);
     try {
       const res = await api.get('/sla/critical').catch(() => ({ complaints: [] }));
-      
-      const mock = [
-        { id: 101, title: 'Mainframe Cooling Failure', priority: 'P0', created_at: new Date(Date.now() - 3.5 * 60 * 60 * 1000).toISOString() },
-        { id: 104, title: 'Encrypted Ledger Desync', priority: 'P0', created_at: new Date(Date.now() - 3.8 * 60 * 60 * 1000).toISOString() },
-        { id: 108, title: 'Regional Node TS-8 Offline', priority: 'P1', created_at: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString() },
-        { id: 112, title: 'Unauthorized API Burst', priority: 'P0', created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
-      ];
-
-      setCriticalItems(res.complaints?.length ? res.complaints : mock);
+      setCriticalItems(res.complaints || []);
     } catch (err) {
       console.error('SLA fetch error', err);
     } finally {
@@ -220,9 +215,78 @@ const SLAMonitor = () => {
     }
   };
 
+  const fetchAgents = async () => {
+    try {
+      const res = await api.get('/sla/agents').catch(() => []);
+      setAgents(Array.isArray(res) ? res : []);
+    } catch (err) {
+      console.error('Failed to fetch agents', err);
+    }
+  };
+
   const handleAction = (type, id) => {
     console.log(`Action ${type} on ${id}`);
     if (type === 'extend') navigate('/justification', { state: { target: id, type: 'SLA' } });
+    if (type === 'reassign') navigate('/justification', { state: { target: id, type: 'Reassign' } });
+    if (type === 'escalate') handleForceEscalate([id]);
+  };
+
+  const handleMassReassign = async () => {
+    if (selectedIds.length === 0) return;
+    const agentId = prompt('Enter agent ID to reassign to:');
+    if (!agentId) return;
+    try {
+      await api.post('/sla/mass-reassign', {
+        complaint_ids: selectedIds,
+        assigned_to: parseInt(agentId)
+      });
+      setSelectedIds([]);
+      fetchSLAData();
+      alert(`Successfully reassigned ${selectedIds.length} cases`);
+    } catch (err) {
+      console.error('Mass reassign failed', err);
+      alert('Failed to reassign. Please check agent ID.');
+    }
+  };
+
+  const handleForceEscalate = async (ids = selectedIds) => {
+    if (ids.length === 0) return;
+    if (!confirm(`Escalate ${ids.length} case(s) to URGENT priority?`)) return;
+    try {
+      await api.post('/sla/force-escalate', {
+        complaint_ids: ids,
+        priority: 'urgent'
+      });
+      setSelectedIds([]);
+      fetchSLAData();
+      alert(`Successfully escalated ${ids.length} cases`);
+    } catch (err) {
+      console.error('Force escalate failed', err);
+      alert('Failed to escalate cases');
+    }
+  };
+
+  const handleDownloadCompliancePack = async () => {
+    try {
+      const res = await api.get('/sla/compliance-pack');
+      const binaryString = window.atob(res.content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download failed', err);
+      alert('Failed to download compliance pack');
+    }
   };
 
   const toggleSelect = (id) => {
@@ -232,9 +296,9 @@ const SLAMonitor = () => {
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 pb-12 text-text-primary">
         
-        {/* Critical Banner */}
+{/* Critical Banner */}
         <AnimatePresence>
-          {criticalItems.filter(c => c.priority === 'P0').length > 0 && (
+          {criticalItems.filter(c => c.priority === 'urgent' || c.priority === 'P0').length > 0 && (
             <motion.div 
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -248,11 +312,11 @@ const SLAMonitor = () => {
                   </div>
                   <div>
                      <p className="font-black text-xl tracking-tight uppercase">URGENT: {criticalItems.length} CASES BREACHING SLA</p>
-                     <p className="text-sm font-semibold opacity-90">Protocol TS-Sentinel has detected imminent breach window for {criticalItems.filter(c => c.priority === 'P0').length} P0 priority units.</p>
+                     <p className="text-sm font-semibold opacity-90">Protocol TS-Sentinel has detected imminent breach window for {criticalItems.filter(c => c.priority === 'urgent' || c.priority === 'P0').length} URGENT priority units.</p>
                   </div>
                </div>
                <div className="flex items-center gap-6 relative z-10">
-                  <button className="bg-white text-rose-600 px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all hover:scale-105 active:scale-95 shadow-xl">
+                  <button onClick={() => handleForceEscalate()} className="bg-white text-rose-600 px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all hover:scale-105 active:scale-95 shadow-xl">
                      ENGAGE CRISIS MODE
                   </button>
                </div>
@@ -292,8 +356,8 @@ const SLAMonitor = () => {
                 </h3>
                 {selectedIds.length > 0 && (
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex gap-4">
-                     <button className="bg-app-bg border border-border-subtle px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:border-brand-primary transition-all">Mass Reassign ({selectedIds.length})</button>
-                     <button className="bg-rose-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-rose-500/20">Force Escalate</button>
+<button onClick={handleMassReassign} className="bg-app-bg border border-border-subtle px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:border-brand-primary transition-all">Mass Reassign ({selectedIds.length})</button>
+                      <button onClick={() => handleForceEscalate()} className="bg-rose-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-rose-500/20">Force Escalate</button>
                   </motion.div>
                 )}
              </div>
@@ -377,9 +441,9 @@ const SLAMonitor = () => {
                    <p className="text-5xl font-black text-rose-600 tracking-tighter">+14%</p>
                    <p className="text-[10px] font-black uppercase text-text-muted mt-2 tracking-widest">Weekly Breach Increase</p>
                 </div>
-                <button className="w-full py-4 bg-app-bg border border-border-subtle rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-subtle/10 hover:border-brand-primary transition-all">
-                   Download Compliance Pack
-                </button>
+<button onClick={handleDownloadCompliancePack} className="w-full py-4 bg-app-bg border border-border-subtle rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-subtle/10 hover:border-brand-primary transition-all">
+                    Download Compliance Pack
+                 </button>
              </div>
 
              <div className="card bg-gradient-to-br from-slate-900 to-slate-800 text-white p-0 overflow-hidden shadow-2xl">
