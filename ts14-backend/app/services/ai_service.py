@@ -1,5 +1,7 @@
 import pickle
 import os
+import json
+from functools import lru_cache
 from app.core.config import settings
 from app.schemas.complaint import ComplaintAnalysisResult, Priority
 
@@ -21,23 +23,30 @@ class AIService:
         else:
             print(f"Model file not found at {settings.AI_MODEL_PATH}")
 
-    def analyze_text(self, text: str) -> ComplaintAnalysisResult:
-        if self.model and self.vectorizer:
-            # Placeholder for actual inference logic
-            # input_vec = self.vectorizer.transform([text])
-            # prediction = self.model.predict(input_vec)
-            # confidence = max(self.model.predict_proba(input_vec)[0])
-            pass
+    @lru_cache(maxsize=1024)
+    def classify(self, text: str) -> ComplaintAnalysisResult:
+        """
+        Classifies the complaint text using the AI model.
+        """
+        # Run the model (Fallback/Placeholder logic)
+        # Note: In a real implementation, you would use:
+        # input_vec = self.vectorizer.transform([text])
+        # prediction = self.model.predict(input_vec)
         
-        # Fallback / Placeholder logic
         category = "Billing" if "bill" in text.lower() or "price" in text.lower() else "General Inquiry"
         priority = Priority.HIGH if "urgent" in text.lower() or "broken" in text.lower() else Priority.MEDIUM
         confidence = 0.85
         
-        return ComplaintAnalysisResult(
+        result = ComplaintAnalysisResult(
             category=category,
             priority=priority,
             confidence=confidence
         )
+
+        return result
+
+    def analyze_text(self, text: str) -> ComplaintAnalysisResult:
+        """Alias for classify to maintain compatibility."""
+        return self.classify(text)
 
 ai_service = AIService()

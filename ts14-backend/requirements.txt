@@ -17,6 +17,5 @@ alembic
 pytest
 openpyxl
 aiofiles
-python-multipart
 # For SSE
 sse-starlette
