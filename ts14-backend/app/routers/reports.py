@@ -453,8 +453,10 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
             footer_encoded = footer.encode('latin-1', 'replace').decode('latin-1')
             pdf.cell(0, 8, footer_encoded, 0, 0, "C")
             
-            pdf_bytes = pdf.output()
-            content = base64.b64encode(pdf_bytes).decode('utf-8')
+            pdf_content = pdf.output(dest='S')
+            if isinstance(pdf_content, str):
+                pdf_content = pdf_content.encode('latin-1')
+            content = base64.b64encode(pdf_content).decode('utf-8')
             content_type = "application/pdf"
         
         else:
