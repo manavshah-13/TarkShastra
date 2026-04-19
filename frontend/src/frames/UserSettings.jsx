@@ -387,10 +387,92 @@ const UserSettings = () => {
                                 </div>
                              </div>
                           </div>
+</div>
+                     )}
+
+                    {activeTab === 'Security' && (
+                       <div className="card space-y-10 bg-[#0F172A]/40 backdrop-blur-3xl border border-white/5 !p-10 !rounded-[40px]">
+                          <div className="flex items-center gap-6">
+                             <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-3xl border border-emerald-500/20 group"><Shield size={28} className="group-hover-rotate-12 transition-transform" /></div>
+                             <div>
+                                <h3 className="text-2xl font-black tracking-tight text-white uppercase">Security Vault</h3>
+                                <p className="text-sm text-text-secondary font-medium mt-1">Manage your security credentials and vault access.</p>
+                             </div>
+                          </div>
+
+                          <div className="space-y-8">
+                             <div className="bg-slate-950/80 p-8 rounded-[40px] border border-white/5">
+                                <div className="space-y-4">
+                                   <div className="flex justify-between items-center">
+                                      <div className="space-y-2">
+                                         <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Vault ID</p>
+                                         <p className="font-mono text-sm font-bold text-white">VAULT-L8-SECURE</p>
+                                      </div>
+                                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="bg-slate-950/80 p-8 rounded-[40px] border border-white/5">
+                                <div className="space-y-4">
+                                   <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Vault Credentials</p>
+                                   <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                         <label className="text-[10px] font-bold text-text-muted">API Key</label>
+                                         <input type="password" value="••••••••••••••••••••" readOnly className="w-full h-12 bg-white/5 border border-slate-800 rounded-xl px-4 text-sm font-mono text-white" />
+                                      </div>
+                                      <div className="space-y-2">
+                                         <label className="text-[10px] font-bold text-text-muted">Access Level</label>
+                                         <select className="w-full h-12 bg-white/5 border border-slate-800 rounded-xl px-4 text-sm font-bold text-white">
+                                            <option>Level 4 - Full Access</option>
+                                            <option>Level 3 - Read/Write</option>
+                                            <option>Level 2 - Read Only</option>
+                                         </select>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
                        </div>
                     )}
-                 </motion.div>
-              </AnimatePresence>
+
+                    {activeTab === 'Notifications' && (
+                       <div className="card space-y-10 bg-[#0F172A]/40 backdrop-blur-3xl border border-white/5 !p-10 !rounded-[40px]">
+                          <div className="flex items-center gap-6">
+                             <div className="p-4 bg-rose-500/10 text-rose-500 rounded-3xl border border-rose-500/20 group"><Bell size={28} className="group-hover-rotate-12 transition-transform" /></div>
+                             <div>
+                                <h3 className="text-2xl font-black tracking-tight text-white uppercase">Sentinel Alerts</h3>
+                                <p className="text-sm text-text-secondary font-medium mt-1">Configure alert thresholds and notification channels.</p>
+                             </div>
+                          </div>
+
+                          <div className="space-y-6">
+                             {[
+                                { id: 'sla', label: 'SLA Breach Alerts', desc: 'Notify when SLA threshold is exceeded', enabled: true },
+                                { id: 'critical', label: 'Critical Priority', desc: 'Alerts for urgent and high priority cases', enabled: true },
+                                { id: 'unassigned', label: 'Unassigned Cases', desc: 'Alert when cases remain unassigned > 1hr', enabled: false },
+                                { id: 'ai', label: 'AI Confidence', desc: 'Notify on low confidence predictions', enabled: false },
+                             ].map(item => (
+                                <div key={item.id} className="flex items-center justify-between p-6 bg-slate-950/80 rounded-2xl border border-white/5">
+                                   <div className="space-y-1">
+                                      <p className="text-sm font-bold text-white">{item.label}</p>
+                                      <p className="text-[10px] font-medium text-text-muted">{item.desc}</p>
+                                   </div>
+                                   <button 
+                                      className={`w-12 h-6 rounded-full transition-all ${item.enabled ? 'bg-brand-primary' : 'bg-slate-800'}`}
+                                      onClick={() => {}}
+                                   >
+                                      <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${item.enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                   </button>
+                                </div>
+                             ))}
+                          </div>
+                       </div>
+                    )}
+                  </motion.div>
+               </AnimatePresence>
            </div>
         </div>
 

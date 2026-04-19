@@ -56,16 +56,16 @@ async def get_team_stats(db: Session = Depends(get_db)):
     crisis_alerts = []
     unassigned_critical = db.query(ComplaintModel).filter(
         ComplaintModel.assigned_to == None,
-        (ComplaintModel.priority == "urgent") | (ComplaintModel.priority == "high")
+        (ComplaintModel.priority == Priority.URGENT) | (ComplaintModel.priority == Priority.HIGH)
     ).all()
     
     for c in unassigned_critical:
         crisis_alerts.append({
             "id": f"unassigned-{c.id}",
             "type": "unassigned",
-            "title": f"Unassigned {c.priority.upper()} Case",
+            "title": f"Unassigned {c.priority.value.upper()} Case",
             "description": f"CMP-{c.id} has no owner. Please assign immediately.",
-            "severity": "critical" if c.priority == "urgent" else "warning"
+            "severity": "critical" if c.priority == Priority.URGENT else "warning"
         })
         
     resolved = db.query(ComplaintModel).filter(ComplaintModel.status == ComplaintStatus.RESOLVED).all()

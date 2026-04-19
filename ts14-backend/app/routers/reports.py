@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.core.database import get_db
-from app.models.complaint import Complaint as ComplaintModel
+from app.models.complaint import Complaint as ComplaintModel, Priority
 from app.models.user import User
 from pydantic import BaseModel
 from typing import List, Optional
@@ -115,18 +115,18 @@ def get_operational_metrics(db):
 
 def get_safety_risk_metrics(db):
     """Get safety and risk metrics including P0 breaches."""
-    urgent = db.query(ComplaintModel).filter(ComplaintModel.priority == "urgent").count()
-    high = db.query(ComplaintModel).filter(ComplaintModel.priority == "high").count()
-    medium = db.query(ComplaintModel).filter(ComplaintModel.priority == "medium").count()
-    low = db.query(ComplaintModel).filter(ComplaintModel.priority == "low").count()
+    urgent = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.URGENT).count()
+    high = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.HIGH).count()
+    medium = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.MEDIUM).count()
+    low = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.LOW).count()
     
     p0_breaches = db.query(ComplaintModel).filter(
-        ComplaintModel.priority == "urgent",
+        ComplaintModel.priority == Priority.URGENT,
         ComplaintModel.status.in_(["new", "in_progress"])
     ).all()
     
     unassigned_urgent = db.query(ComplaintModel).filter(
-        ComplaintModel.priority == "urgent",
+        ComplaintModel.priority == Priority.URGENT,
         ComplaintModel.assigned_to == None
     ).count()
     
@@ -496,12 +496,13 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
                 writer.writerow(["ID", "Title", "Category", "Priority", "Status", "Risk Score", "SLA Breach", "P0 Critical", "Assigned To", "Created At"])
                 risk = get_safety_risk_metrics(db)
                 for c in complaints:
-                    risk_score = 9 if str(c.priority).upper() == "URGENT" else 7 if str(c.priority).upper() == "HIGH" else 5
-                    sla_breach = "YES" if str(c.priority).upper() == "URGENT" else "NO"
-                    p0_critical = "YES" if str(c.priority).upper() == "URGENT" else "NO"
+                    priority_val = c.priority.value if hasattr(c.priority, 'value') else c.priority
+                    risk_score = 9 if priority_val == "urgent" else 7 if priority_val == "high" else 5
+                    sla_breach = "YES" if priority_val == "urgent" else "NO"
+                    p0_critical = "YES" if priority_val == "urgent" else "NO"
                     writer.writerow([
                         c.id, c.title, c.category,
-                        c.priority.value if hasattr(c.priority, 'value') else c.priority,
+                        priority_val,
                         c.status.value if hasattr(c.status, 'value') else c.status,
                         risk_score, sla_breach, p0_critical,
                         "Unassigned" if not c.assigned_to else "Assigned",
