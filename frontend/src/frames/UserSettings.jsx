@@ -51,6 +51,28 @@ const UserSettings = () => {
   const [activeTab, setActiveTab] = useState('Profile');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [ingestStatus, setIngestStatus] = useState('Healthy');
+  const [isTracing, setIsTracing] = useState(false);
+
+  const handleIngestTest = () => {
+    if (ingestStatus === 'Verifying...') return;
+    setIngestStatus('Verifying...');
+    setTimeout(() => setIngestStatus('Healthy'), 2000);
+  };
+
+  // Sentinel Alerts State
+  const [notifications, setNotifications] = useState([
+    { id: 'sla', label: 'SLA Breach Alerts', desc: 'Notify when SLA threshold is exceeded', enabled: true },
+    { id: 'critical', label: 'Critical Priority', desc: 'Alerts for urgent and high priority cases', enabled: true },
+    { id: 'unassigned', label: 'Unassigned Cases', desc: 'Alert when cases remain unassigned > 1hr', enabled: false },
+    { id: 'ai', label: 'AI Confidence', desc: 'Notify on low confidence predictions', enabled: false },
+  ]);
+
+  const toggleNotification = (id) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, enabled: !n.enabled } : n
+    ));
+  };
   
   // Profile State
   const [profile, setProfile] = useState({
@@ -334,7 +356,7 @@ const UserSettings = () => {
 
                           <div className="space-y-8">
                              <div className="bg-slate-950/80 p-8 rounded-[40px] border border-white/5 group relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-transparent opacity-0 group-hover:opacity-10 transition-opacity" />
                                 <div className="flex justify-between items-center relative z-10">
                                    <div className="space-y-2">
                                       <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Vault_Access_Token</p>
@@ -357,7 +379,10 @@ const UserSettings = () => {
                              </div>
 
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="p-8 bg-app-bg border border-slate-800 rounded-[32px] space-y-4 group hover:border-brand-primary transition-all cursor-pointer relative overflow-hidden">
+                                <button 
+                                  onClick={handleIngestTest}
+                                  className="p-8 bg-app-bg border border-slate-800 rounded-[32px] space-y-4 group hover:border-brand-primary transition-all text-left relative overflow-hidden"
+                                >
                                    <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500"><Database size={80} /></div>
                                    <div className="flex items-center gap-4 text-brand-primary relative z-10">
                                       <div className="p-3 bg-brand-primary/10 rounded-2xl"><Database size={20} /></div>
@@ -367,11 +392,16 @@ const UserSettings = () => {
                                       Synchronize external diagnostic units directly into the neural ledger.
                                    </p>
                                    <div className="flex items-center gap-3 pt-4 relative z-10">
-                                      <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_var(--success)]" />
-                                      <span className="text-[9px] font-black text-text-primary uppercase tracking-[0.2em]">Node Healthy</span>
+                                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${ingestStatus === 'Healthy' ? 'bg-emerald-500 shadow-[0_0_8px_var(--success)]' : 'bg-brand-primary animate-pulse'}`} />
+                                      <span className="text-[9px] font-black text-text-primary uppercase tracking-[0.2em]">
+                                        {ingestStatus === 'Healthy' ? 'Node Healthy' : 'Node Verifying...'}
+                                      </span>
                                    </div>
-                                </div>
-                                <div className="p-8 bg-app-bg border border-slate-800 rounded-[32px] space-y-4 group hover:border-violet-500 transition-all cursor-pointer relative overflow-hidden">
+                                </button>
+                                <button 
+                                  onClick={() => setIsTracing(!isTracing)}
+                                  className={`p-8 bg-app-bg border rounded-[32px] space-y-4 group transition-all text-left relative overflow-hidden ${isTracing ? 'border-violet-500 shadow-xl shadow-violet-500/10' : 'border-slate-800 hover:border-violet-500'}`}
+                                >
                                    <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500"><Cpu size={80} /></div>
                                    <div className="flex items-center gap-4 text-violet-500 relative z-10">
                                       <div className="p-3 bg-violet-500/10 rounded-2xl"><Cpu size={20} /></div>
@@ -381,10 +411,12 @@ const UserSettings = () => {
                                       Stream real-time SHAP analysis and model confidence telemetry.
                                    </p>
                                    <div className="flex items-center gap-3 pt-4 relative z-10">
-                                      <div className="w-2 h-2 rounded-full bg-slate-700" />
-                                      <span className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">Bridge Sleep</span>
+                                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isTracing ? 'bg-violet-500 animate-ping' : 'bg-slate-700'}`} />
+                                      <span className="text-[9px] font-black uppercase tracking-[0.2em] transition-colors">
+                                        {isTracing ? <span className="text-violet-500">Live Stream Active</span> : <span className="text-text-muted">Bridge Sleep</span>}
+                                      </span>
                                    </div>
-                                </div>
+                                </button>
                              </div>
                           </div>
 </div>
@@ -441,7 +473,7 @@ const UserSettings = () => {
                     {activeTab === 'Notifications' && (
                        <div className="card space-y-10 bg-[#0F172A]/40 backdrop-blur-3xl border border-white/5 !p-10 !rounded-[40px]">
                           <div className="flex items-center gap-6">
-                             <div className="p-4 bg-rose-500/10 text-rose-500 rounded-3xl border border-rose-500/20 group"><Bell size={28} className="group-hover-rotate-12 transition-transform" /></div>
+                             <div className="p-4 bg-rose-500/10 text-rose-500 rounded-3xl border border-rose-500/20 group"><Bell size={28} className="group-hover:rotate-12 transition-transform" /></div>
                              <div>
                                 <h3 className="text-2xl font-black tracking-tight text-white uppercase">Sentinel Alerts</h3>
                                 <p className="text-sm text-text-secondary font-medium mt-1">Configure alert thresholds and notification channels.</p>
@@ -449,12 +481,7 @@ const UserSettings = () => {
                           </div>
 
                           <div className="space-y-6">
-                             {[
-                                { id: 'sla', label: 'SLA Breach Alerts', desc: 'Notify when SLA threshold is exceeded', enabled: true },
-                                { id: 'critical', label: 'Critical Priority', desc: 'Alerts for urgent and high priority cases', enabled: true },
-                                { id: 'unassigned', label: 'Unassigned Cases', desc: 'Alert when cases remain unassigned > 1hr', enabled: false },
-                                { id: 'ai', label: 'AI Confidence', desc: 'Notify on low confidence predictions', enabled: false },
-                             ].map(item => (
+                             {notifications.map(item => (
                                 <div key={item.id} className="flex items-center justify-between p-6 bg-slate-950/80 rounded-2xl border border-white/5">
                                    <div className="space-y-1">
                                       <p className="text-sm font-bold text-white">{item.label}</p>
@@ -462,7 +489,7 @@ const UserSettings = () => {
                                    </div>
                                    <button 
                                       className={`w-12 h-6 rounded-full transition-all ${item.enabled ? 'bg-brand-primary' : 'bg-slate-800'}`}
-                                      onClick={() => {}}
+                                      onClick={() => toggleNotification(item.id)}
                                    >
                                       <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${item.enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
                                    </button>
