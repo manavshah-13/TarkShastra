@@ -10,10 +10,11 @@ from app.models.user import User, UserRole
 from app.models.complaint import Complaint, ComplaintStatus, Priority
 from app.core.security import get_password_hash
 
+
 def seed():
     # Create tables
     Base.metadata.create_all(bind=engine)
-    
+
     db = SessionLocal()
     try:
         # 1. Create Default Users
@@ -22,49 +23,51 @@ def seed():
                 "username": "admin",
                 "email": "admin@tarkshastra.io",
                 "password": "admin123",
-                "role": UserRole.ADMIN
+                "role": UserRole.ADMIN,
             },
             {
                 "username": "manager",
                 "email": "manager@tarkshastra.io",
                 "password": "manager123",
-                "role": UserRole.MANAGER
+                "role": UserRole.MANAGER,
             },
             {
                 "username": "analyst",
                 "email": "analyst@tarkshastra.io",
                 "password": "analyst123",
-                "role": UserRole.ANALYST
+                "role": UserRole.USER,
             },
             {
                 "username": "sarah_j",
                 "email": "sarah.j@tarkshastra.io",
                 "password": "agent123",
-                "role": UserRole.USER
+                "role": UserRole.USER,
             },
             {
                 "username": "marcus_t",
                 "email": "marcus.t@tarkshastra.io",
                 "password": "agent123",
-                "role": UserRole.USER
+                "role": UserRole.USER,
             },
             {
                 "username": "elena_r",
                 "email": "elena.r@tarkshastra.io",
                 "password": "agent123",
-                "role": UserRole.USER
-            }
+                "role": UserRole.USER,
+            },
         ]
-        
+
         db_users = []
         for u in users:
-            existing_user = db.query(User).filter(User.username == u["username"]).first()
+            existing_user = (
+                db.query(User).filter(User.username == u["username"]).first()
+            )
             if not existing_user:
                 new_user = User(
                     username=u["username"],
                     email=u["email"],
                     hashed_password=get_password_hash(u["password"]),
-                    role=u["role"]
+                    role=u["role"],
                 )
                 db.add(new_user)
                 db_users.append(new_user)
@@ -72,46 +75,116 @@ def seed():
             else:
                 db_users.append(existing_user)
                 print(f"User {u['username']} already exists")
-        
+
         db.commit()
 
         # 2. Create Mock Complaints
         complaints_data = [
-            {"title": "Total Screen Failure: Tark-X Module", "desc": "Device arrived with a cracked screen and ozone smell.", "cat": "Hardware", "prio": Priority.URGENT, "status": ComplaintStatus.NEW},
-            {"title": "Billing Discrepancy: Q1 Cycle", "desc": "Customer charged twice for the platinum support tier.", "cat": "Billing", "prio": Priority.HIGH, "status": ComplaintStatus.IN_PROGRESS},
-            {"title": "Sensor Artifacting: Model Beta", "desc": "Intermittent noise in the neural ingest signal.", "cat": "Hardware", "prio": Priority.MEDIUM, "status": ComplaintStatus.NEW},
-            {"title": "Response Latency in Neural Ingest", "desc": "Processing time exceeded 500ms threshold.", "cat": "Software", "prio": Priority.MEDIUM, "status": ComplaintStatus.RESOLVED},
-            {"title": "Safety Protocol Breach: Region 4", "desc": "Unauthorized access detected in secure zone.", "cat": "Safety", "prio": Priority.URGENT, "status": ComplaintStatus.NEW},
-            {"title": "Duplicate Ticket Entry Error", "desc": "User reported multiple identical tickets created.", "cat": "Other", "prio": Priority.LOW, "status": ComplaintStatus.RESOLVED}
+            {
+                "title": "Total Screen Failure: Tark-X Module",
+                "desc": "Device arrived with a cracked screen and ozone smell.",
+                "cat": "Hardware",
+                "prio": Priority.URGENT,
+                "status": ComplaintStatus.NEW,
+            },
+            {
+                "title": "Billing Discrepancy: Q1 Cycle",
+                "desc": "Customer charged twice for the platinum support tier.",
+                "cat": "Billing",
+                "prio": Priority.HIGH,
+                "status": ComplaintStatus.IN_PROGRESS,
+            },
+            {
+                "title": "Sensor Artifacting: Model Beta",
+                "desc": "Intermittent noise in the neural ingest signal.",
+                "cat": "Hardware",
+                "prio": Priority.MEDIUM,
+                "status": ComplaintStatus.NEW,
+            },
+            {
+                "title": "Response Latency in Neural Ingest",
+                "desc": "Processing time exceeded 500ms threshold.",
+                "cat": "Software",
+                "prio": Priority.MEDIUM,
+                "status": ComplaintStatus.RESOLVED,
+            },
+            {
+                "title": "Safety Protocol Breach: Region 4",
+                "desc": "Unauthorized access detected in secure zone.",
+                "cat": "Safety",
+                "prio": Priority.URGENT,
+                "status": ComplaintStatus.NEW,
+            },
+            {
+                "title": "Duplicate Ticket Entry Error",
+                "desc": "User reported multiple identical tickets created.",
+                "cat": "Other",
+                "prio": Priority.LOW,
+                "status": ComplaintStatus.RESOLVED,
+            },
         ]
 
         # Add more random complaints to make it look full
         for i in range(15):
-            complaints_data.append({
-                "title": f"Autogenerated Issue #{i+100}",
-                "desc": f"Description for autogenerated issue {i+100}. Context-free anomaly detected.",
-                "cat": "Hardware" if i % 2 == 0 else "Software",
-                "prio": Priority.MEDIUM if i % 3 == 0 else Priority.LOW,
-                "status": ComplaintStatus.IN_PROGRESS if i % 2 == 0 else ComplaintStatus.NEW
-            })
+            complaints_data.append(
+                {
+                    "title": f"Autogenerated Issue #{i + 100}",
+                    "desc": f"Description for autogenerated issue {i + 100}. Context-free anomaly detected.",
+                    "cat": "Hardware" if i % 2 == 0 else "Software",
+                    "prio": Priority.MEDIUM if i % 3 == 0 else Priority.LOW,
+                    "status": ComplaintStatus.IN_PROGRESS
+                    if i % 2 == 0
+                    else ComplaintStatus.NEW,
+                }
+            )
 
+        # Create the complaints in the database
         count = 0
-        for cd in complaints_data:
-            existing = db.query(Complaint).filter(Complaint.title == cd["title"]).first()
-            if not existing:
+        for c in complaints_data:
+            new_complaint = Complaint(
+                title=c["title"],
+                description=c["desc"],
+                category=c["cat"],
+                priority=c["prio"],
+                status=c["status"],
+                assigned_to=db_users[count % len(db_users)].id if db_users else None,
+            )
+            db.add(new_complaint)
+            count += 1
+
+        db.commit()
+
+        all_existing_complaints = db.query(Complaint).all()
+
+        for i, complaint in enumerate(all_existing_complaints):
+            # Update existing complaints with mix of confidence levels for QA testing
+            if i < 3:  # First 3 complaints have low confidence
+                confidence = 0.45 + (i * 0.15)  # 0.45, 0.60, 0.75
+            elif i < 6:  # Next 3 have medium confidence
+                confidence = 0.78 + ((i - 3) * 0.02)  # 0.78, 0.80, 0.82
+            else:  # Rest have high confidence
+                confidence = 0.85 + ((i % 5) * 0.02)  # 0.85-0.93
+
+            complaint.ai_confidence = confidence
+            count += 1
+
+        # Create additional low confidence complaints if needed
+        if len(all_existing_complaints) < 10:
+            for i in range(10 - len(all_existing_complaints)):
+                confidence = 0.3 + (i * 0.1)  # Very low confidence: 0.3, 0.4, etc.
                 new_complaint = Complaint(
-                    title=cd["title"],
-                    description=cd["desc"],
-                    category=cd["cat"],
-                    priority=cd["prio"],
-                    status=cd["status"],
-                    ai_confidence=0.92,
-                    created_at=datetime.utcnow() - timedelta(days=i % 5, hours=i % 24),
-                    assigned_to=db_users[i % len(db_users)].id
+                    title=f"Low Confidence Review Case #{i + 1}",
+                    description=f"This is a test case with very low AI confidence ({confidence:.2f}) for QA review queue testing.",
+                    category="Hardware" if i % 2 == 0 else "Software",
+                    priority=Priority.HIGH if i < 2 else Priority.MEDIUM,
+                    status=ComplaintStatus.NEW,
+                    ai_confidence=confidence,
+                    created_at=datetime.utcnow() - timedelta(hours=i),
+                    assigned_to=db_users[0].id,  # Assign to admin/analyst
                 )
                 db.add(new_complaint)
                 count += 1
-        
+
         db.commit()
         print(f"Seeded {count} complaints")
 
@@ -120,6 +193,7 @@ def seed():
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed()
