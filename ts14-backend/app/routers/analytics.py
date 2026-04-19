@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.complaint import Complaint as ComplaintModel, ComplaintStatus
+from app.models.complaint import Complaint as ComplaintModel, ComplaintStatus, Priority
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from collections import defaultdict
