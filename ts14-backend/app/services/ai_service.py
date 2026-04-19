@@ -58,7 +58,7 @@ class AIService:
         # Prepare temporary dataframe for prediction
         temp_df = pd.DataFrame([{
             'text': text,
-            'text_clean': re.sub(r'\b(packaging|product|trade)\b', '', text.lower(), flags=re.I),
+            'text_clean': text.lower().strip(),  # Keep full text for inference
             'sentiment': sentiment,
             'sentiment_num': self.sentiment_map.get(sentiment.lower(), 1),
             'text_len': len(text),

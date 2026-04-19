@@ -22,8 +22,8 @@ import csv
 import base64
 from fpdf import FPDF
 
-def get_filtered_complaints(db, report_type: str):
-    """Filter complaints based on report type."""
+def get_filtered_complaints(db, report_type: str, range_filter: str = None):
+    """Filter complaints based on report type and date range."""
     # Map frontend types to full names
     type_map = {
         "Summary": "Strategic Summary",
@@ -32,36 +32,73 @@ def get_filtered_complaints(db, report_type: str):
         "Neural": "Neural Insight"
     }
     report_type = type_map.get(report_type, report_type)
-    
-    if report_type == "Strategic Summary":
-        return db.query(ComplaintModel).all()
-    elif report_type == "Operational Audit":
-        return db.query(ComplaintModel).all()
-    elif report_type == "Safety and Risk":
-        return db.query(ComplaintModel).filter(ComplaintModel.priority.in_(["urgent", "high"])).all()
-    elif report_type == "Neural Insight":
-        return db.query(ComplaintModel).filter(ComplaintModel.ai_confidence != None).all()
-    else:
-        return db.query(ComplaintModel).all()
 
-def get_strategic_kpis(db):
+    # Apply date range filter
+    query = db.query(ComplaintModel)
+    if range_filter:
+        now = datetime.utcnow()
+        if range_filter == "L-24H":
+            cutoff = now - timedelta(hours=24)
+        elif range_filter == "L-7D":
+            cutoff = now - timedelta(days=7)
+        elif range_filter == "L-30D":
+            cutoff = now - timedelta(days=30)
+        elif range_filter == "QTD":
+            # Quarter to date - first day of current quarter
+            quarter = (now.month - 1) // 3 + 1
+            quarter_start = datetime(now.year, (quarter - 1) * 3 + 1, 1)
+            cutoff = quarter_start
+        else:
+            cutoff = now - timedelta(days=7)  # Default to last 7 days
+
+        query = query.filter(ComplaintModel.created_at >= cutoff)
+
+    if report_type == "Strategic Summary":
+        return query.all()
+    elif report_type == "Operational Audit":
+        return query.all()
+    elif report_type == "Safety and Risk":
+        return query.filter(ComplaintModel.priority.in_(["urgent", "high"])).all()
+    elif report_type == "Neural Insight":
+        return query.filter(ComplaintModel.ai_confidence != None).all()
+    else:
+        return query.all()
+
+def get_strategic_kpis(db, range_filter: str = None):
     """Get KPI metrics for executive review."""
-    total = db.query(ComplaintModel).count()
-    resolved = db.query(ComplaintModel).filter(ComplaintModel.status == "resolved").count()
-    in_progress = db.query(ComplaintModel).filter(ComplaintModel.status == "in_progress").count()
-    new_cases = db.query(ComplaintModel).filter(ComplaintModel.status == "new").count()
-    
-    category_stats = db.query(
+    query = db.query(ComplaintModel)
+    if range_filter:
+        now = datetime.utcnow()
+        if range_filter == "L-24H":
+            cutoff = now - timedelta(hours=24)
+        elif range_filter == "L-7D":
+            cutoff = now - timedelta(days=7)
+        elif range_filter == "L-30D":
+            cutoff = now - timedelta(days=30)
+        elif range_filter == "QTD":
+            quarter = (now.month - 1) // 3 + 1
+            quarter_start = datetime(now.year, (quarter - 1) * 3 + 1, 1)
+            cutoff = quarter_start
+        else:
+            cutoff = now - timedelta(days=7)
+        query = query.filter(ComplaintModel.created_at >= cutoff)
+
+    total = query.count()
+    resolved = query.filter(ComplaintModel.status == "resolved").count()
+    in_progress = query.filter(ComplaintModel.status == "in_progress").count()
+    new_cases = query.filter(ComplaintModel.status == "new").count()
+
+    category_stats = query.with_entities(
         ComplaintModel.category,
         func.count(ComplaintModel.id).label('count')
     ).group_by(ComplaintModel.category).all()
-    
-    priority_stats = db.query(
+
+    priority_stats = query.with_entities(
         ComplaintModel.priority,
         func.count(ComplaintModel.id).label('count')
     ).group_by(ComplaintModel.priority).all()
-    
-    avg_confidence = db.query(func.avg(ComplaintModel.ai_confidence)).scalar() or 0
+
+    avg_confidence = query.with_entities(func.avg(ComplaintModel.ai_confidence)).scalar() or 0
     
     return {
         "total_complaints": total,
@@ -74,18 +111,35 @@ def get_strategic_kpis(db):
         "priorities": {str(p): count for p, count in priority_stats}
     }
 
-def get_operational_metrics(db):
+def get_operational_metrics(db, range_filter: str = None):
     """Get operational metrics including agent throughput."""
-    total = db.query(ComplaintModel).count()
-    resolved = db.query(ComplaintModel).filter(ComplaintModel.status == "resolved").count()
-    in_progress = db.query(ComplaintModel).filter(ComplaintModel.status == "in_progress").count()
-    new_cases = db.query(ComplaintModel).filter(ComplaintModel.status == "new").count()
+    query = db.query(ComplaintModel)
+    if range_filter:
+        now = datetime.utcnow()
+        if range_filter == "L-24H":
+            cutoff = now - timedelta(hours=24)
+        elif range_filter == "L-7D":
+            cutoff = now - timedelta(days=7)
+        elif range_filter == "L-30D":
+            cutoff = now - timedelta(days=30)
+        elif range_filter == "QTD":
+            quarter = (now.month - 1) // 3 + 1
+            quarter_start = datetime(now.year, (quarter - 1) * 3 + 1, 1)
+            cutoff = quarter_start
+        else:
+            cutoff = now - timedelta(days=7)
+        query = query.filter(ComplaintModel.created_at >= cutoff)
+
+    total = query.count()
+    resolved = query.filter(ComplaintModel.status == "resolved").count()
+    in_progress = query.filter(ComplaintModel.status == "in_progress").count()
+    new_cases = query.filter(ComplaintModel.status == "new").count()
     
     users = db.query(User).all()
     agent_stats = []
     for user in users:
-        assigned = db.query(ComplaintModel).filter(ComplaintModel.assigned_to == user.id).count()
-        resolved_by = db.query(ComplaintModel).filter(
+        assigned = query.filter(ComplaintModel.assigned_to == user.id).count()
+        resolved_by = query.filter(
             ComplaintModel.assigned_to == user.id,
             ComplaintModel.status == "resolved"
         ).count()
@@ -113,24 +167,41 @@ def get_operational_metrics(db):
         "status_timeline": status_timeline
     }
 
-def get_safety_risk_metrics(db):
+def get_safety_risk_metrics(db, range_filter: str = None):
     """Get safety and risk metrics including P0 breaches."""
-    urgent = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.URGENT).count()
-    high = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.HIGH).count()
-    medium = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.MEDIUM).count()
-    low = db.query(ComplaintModel).filter(ComplaintModel.priority == Priority.LOW).count()
-    
-    p0_breaches = db.query(ComplaintModel).filter(
+    query = db.query(ComplaintModel)
+    if range_filter:
+        now = datetime.utcnow()
+        if range_filter == "L-24H":
+            cutoff = now - timedelta(hours=24)
+        elif range_filter == "L-7D":
+            cutoff = now - timedelta(days=7)
+        elif range_filter == "L-30D":
+            cutoff = now - timedelta(days=30)
+        elif range_filter == "QTD":
+            quarter = (now.month - 1) // 3 + 1
+            quarter_start = datetime(now.year, (quarter - 1) * 3 + 1, 1)
+            cutoff = quarter_start
+        else:
+            cutoff = now - timedelta(days=7)
+        query = query.filter(ComplaintModel.created_at >= cutoff)
+
+    urgent = query.filter(ComplaintModel.priority == Priority.URGENT).count()
+    high = query.filter(ComplaintModel.priority == Priority.HIGH).count()
+    medium = query.filter(ComplaintModel.priority == Priority.MEDIUM).count()
+    low = query.filter(ComplaintModel.priority == Priority.LOW).count()
+
+    p0_breaches = query.filter(
         ComplaintModel.priority == Priority.URGENT,
         ComplaintModel.status.in_(["new", "in_progress"])
     ).all()
-    
-    unassigned_urgent = db.query(ComplaintModel).filter(
+
+    unassigned_urgent = query.filter(
         ComplaintModel.priority == Priority.URGENT,
         ComplaintModel.assigned_to == None
     ).count()
-    
-    total = db.query(ComplaintModel).count()
+
+    total = query.count()
     risk_score = round((urgent / total * 100) if total > 0 else 0, 1)
     
     return {
@@ -145,9 +216,26 @@ def get_safety_risk_metrics(db):
         "risk_score": risk_score
     }
 
-def get_neural_metrics(db):
+def get_neural_metrics(db, range_filter: str = None):
     """Get AI/ML metrics including confidence and model performance."""
-    complaints = db.query(ComplaintModel).filter(ComplaintModel.ai_confidence != None).all()
+    query = db.query(ComplaintModel).filter(ComplaintModel.ai_confidence != None)
+    if range_filter:
+        now = datetime.utcnow()
+        if range_filter == "L-24H":
+            cutoff = now - timedelta(hours=24)
+        elif range_filter == "L-7D":
+            cutoff = now - timedelta(days=7)
+        elif range_filter == "L-30D":
+            cutoff = now - timedelta(days=30)
+        elif range_filter == "QTD":
+            quarter = (now.month - 1) // 3 + 1
+            quarter_start = datetime(now.year, (quarter - 1) * 3 + 1, 1)
+            cutoff = quarter_start
+        else:
+            cutoff = now - timedelta(days=7)
+        query = query.filter(ComplaintModel.created_at >= cutoff)
+
+    complaints = query.all()
     
     total = len(complaints)
     high_conf = sum(1 for c in complaints if c.ai_confidence and c.ai_confidence >= 0.8)
@@ -187,7 +275,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
         }
         report_type = type_map.get(config.type, config.type)
         
-        complaints = get_filtered_complaints(db, report_type)
+        complaints = get_filtered_complaints(db, config.type, config.range)
         report_id = f"REP-{report_type[0].upper()}{datetime.now().strftime('%y%m%d%H%M')}"
         
         if config.format == "PDF":
@@ -207,7 +295,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
             pdf.ln(8)
             
             if report_type == "Strategic Summary":
-                kpis = get_strategic_kpis(db)
+                kpis = get_strategic_kpis(db, config.range)
                 
                 pdf.set_font("Helvetica", "B", 16)
                 pdf.set_text_color(15, 23, 42)
@@ -263,7 +351,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
                     pdf.cell(0, 7, f"  {cat}: {count} cases ({pct}%)", 0, 1, "L")
                     
             elif report_type == "Operational Audit":
-                ops = get_operational_metrics(db)
+                ops = get_operational_metrics(db, config.range)
                 
                 pdf.set_font("Helvetica", "B", 16)
                 pdf.set_text_color(15, 23, 42)
@@ -307,7 +395,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
                     pdf.cell(30, 9, f"{agent['throughput']}%", 1, 1, "C")
                     
             elif report_type == "Safety and Risk":
-                risk = get_safety_risk_metrics(db)
+                risk = get_safety_risk_metrics(db, config.range)
                 
                 pdf.set_font("Helvetica", "B", 16)
                 pdf.set_text_color(15, 23, 42)
@@ -366,7 +454,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
                     pdf.cell(35, 8, status.upper(), 1, 1, "C")
                     
             elif report_type == "Neural Insight":
-                neural = get_neural_metrics(db)
+                neural = get_neural_metrics(db, config.range)
                 
                 pdf.set_font("Helvetica", "B", 16)
                 pdf.set_text_color(15, 23, 42)
@@ -429,8 +517,7 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
             pdf.cell(35, 9, "Status", 1, 1, "C", True)
             
             pdf.set_font("Helvetica", "", 8)
-            limit = min(25, len(complaints))
-            for c in complaints[:limit]:
+            for c in complaints:
                 title = str(c.title)[:40].encode('latin-1', 'replace').decode('latin-1')
                 cat = str(c.category or "N/A")[:12].encode('latin-1', 'replace').decode('latin-1')
                 prio = str(c.priority.value if hasattr(c.priority, 'value') else c.priority)[:8]
@@ -440,11 +527,6 @@ async def generate_report(config: ReportConfig, db: Session = Depends(get_db)):
                 pdf.cell(30, 8, cat, 1, 0, "C")
                 pdf.cell(25, 8, prio.upper(), 1, 0, "C")
                 pdf.cell(35, 8, status.upper(), 1, 1, "C")
-                
-            if len(complaints) > limit:
-                pdf.ln(4)
-                pdf.set_font("Helvetica", "I", 8)
-                pdf.cell(0, 6, f"... {len(complaints) - limit} more records in full export", 0, 1, "L")
             
             # Footer
             pdf.ln(15)

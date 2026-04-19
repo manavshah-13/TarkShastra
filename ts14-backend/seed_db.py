@@ -34,7 +34,7 @@ def seed():
                 "username": "analyst",
                 "email": "analyst@tarkshastra.io",
                 "password": "analyst123",
-                "role": UserRole.ANALYST
+                "role": UserRole.USER
             },
             {
                 "username": "sarah_j",

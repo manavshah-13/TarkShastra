@@ -294,47 +294,37 @@ const AITheater = () => {
                   </div>
                 </div>
                 
-                <div className="w-full grid grid-cols-2 gap-4 p-4 bg-app-bg/50 rounded-xl border border-border-subtle">
-                   <div className="text-center group cursor-help">
-                      <p className="text-xl font-black text-text-primary flex items-center justify-center gap-1">
-                        8.4 <span className="text-[10px] text-rose-500">↑</span>
-                      </p>
-                      <p className="text-tiny text-text-muted uppercase">Sentiment</p>
-                   </div>
-                   <div className="text-center border-l border-border-subtle">
-                      <p className="text-xl font-black text-emerald-500 uppercase">Strong</p>
-                      <p className="text-tiny text-text-muted uppercase">Signal</p>
-                   </div>
-                </div>
+                 <div className="w-full grid grid-cols-2 gap-4 p-4 bg-app-bg/50 rounded-xl border border-border-subtle">
+                    <div className="text-center group cursor-help">
+                       <p className="text-xl font-black text-text-primary flex items-center justify-center gap-1">
+                         {(complaint?.ai_confidence * 10 || 8.4).toFixed(1)} <span className="text-[10px] text-emerald-500">AI</span>
+                       </p>
+                       <p className="text-tiny text-text-muted uppercase">Confidence</p>
+                    </div>
+                    <div className="text-center border-l border-border-subtle">
+                       <p className="text-xl font-black text-emerald-500 uppercase">{priority}</p>
+                       <p className="text-tiny text-text-muted uppercase">Priority</p>
+                    </div>
+                 </div>
              </div>
 
-             {/* Similar Cases found */}
-             <div className="card space-y-4">
-                <div className="flex items-center gap-3">
-                   <Layers size={18} className="text-brand-primary" />
-                   <h3 className="text-sm font-bold tracking-tight uppercase">Historical Anchors</h3>
-                </div>
-                <p className="text-[10px] text-text-muted mb-4 leading-relaxed">
-                   Identifying top matches from the archive to ensure precedent-based routing.
-                </p>
-                <div className="space-y-3">
-                   {[
-                     { id: '184', score: '98%', res: 'Refunded' },
-                     { id: '201', score: '94%', res: 'Escalated' },
-                     { id: '089', score: '82%', res: 'Refunded' },
-                   ].map(item => (
-                     <div key={item.id} className="p-3 bg-app-bg/50 rounded-lg border border-border-subtle flex justify-between items-center group hover:border-brand-primary/30 transition-all cursor-pointer">
-                        <div className="flex flex-col">
-                           <span className="text-xs font-bold text-text-primary">Case #{item.id}</span>
-                           <span className="text-[10px] text-text-muted">Similarity: {item.score}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded">
-                           {item.res}
-                        </span>
-                     </div>
-                   ))}
-                </div>
-             </div>
+              {/* Similar Cases found */}
+              <div className="card space-y-4">
+                 <div className="flex items-center gap-3">
+                    <Layers size={18} className="text-brand-primary" />
+                    <h3 className="text-sm font-bold tracking-tight uppercase">Historical Anchors</h3>
+                 </div>
+                 <p className="text-[10px] text-text-muted mb-4 leading-relaxed">
+                    Identifying top matches from the archive to ensure precedent-based routing.
+                 </p>
+                 <div className="space-y-3">
+                    <div className="text-center p-8 bg-app-bg/50 rounded-xl border border-dashed border-border-subtle">
+                       <Layers size={24} className="mx-auto animate-pulse text-text-muted mb-2" />
+                       <p className="text-xs text-text-muted">Similar cases analysis in progress...</p>
+                       <p className="text-[10px] text-text-muted mt-1">Feature coming soon</p>
+                    </div>
+                 </div>
+              </div>
           </div>
 
         </div>

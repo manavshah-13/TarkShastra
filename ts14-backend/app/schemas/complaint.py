@@ -27,6 +27,9 @@ class Complaint(ComplaintBase):
     priority: Priority
     status: ComplaintStatus
     ai_confidence: Optional[float] = None
+    recommended_action: Optional[str] = None
+    recommendation_explanation: Optional[str] = None
+    estimated_resolution_days: Optional[float] = None
     created_at: datetime
     updated_at: datetime
     resolved_at: Optional[datetime] = None

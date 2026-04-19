@@ -36,7 +36,7 @@ def remove_category_keywords(text, category):
     pattern = r'\b' + re.escape(category.lower()) + r'\b'
     return re.sub(pattern, '', text.lower()).strip()
 
-df['text_clean'] = df.apply(lambda row: remove_category_keywords(row['text'], row['category']), axis=1)
+df['text_clean'] = df['text'].str.lower().str.strip()  # Keep full text for better learning
 
 
 df['text_len'] = df['text'].str.len()
@@ -147,7 +147,7 @@ recommender_preprocessor = ColumnTransformer([
     ('tfidf', TfidfVectorizer(max_features=5000, ngram_range=(1,2)), priority_text_col)
 ])
 
-X_tfidf = recommender_preprocessor.fit_transform(X) # fit on full dataset
+X_tfidf = recommender_preprocessor.fit_transform(X) 
 knn = NearestNeighbors(n_neighbors=5, metric='cosine')
 knn.fit(X_tfidf)
 
@@ -183,8 +183,7 @@ def predict_complaint(complaint_text, sentiment='neutral'):
     tfidf_vec = recommender_preprocessor.transform(temp_df)
     distances, indices = knn.kneighbors(tfidf_vec)
     
-    # Retrieve the resolution types from those indices
-    # Dynamically read the database so manual overwrites to resolutions appear instantly without retraining
+    
     live_df = pd.read_csv('TS-PS14.csv')
     neighbors_resolutions = live_df['resolution_action'].iloc[indices[0]].values
     most_common_res, count = Counter(neighbors_resolutions).most_common(1)[0]

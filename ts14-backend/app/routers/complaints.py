@@ -55,6 +55,16 @@ async def get_complaint(id: int, db: Session = Depends(get_db)):
     complaint = db.query(ComplaintModel).filter(ComplaintModel.id == id).first()
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # Workaround: Manually populate AI fields from database since SQLAlchemy mapper
+    # doesn't recognize the columns after table recreation
+    from sqlalchemy import text
+    result = db.execute(text("SELECT recommended_action, recommendation_explanation, estimated_resolution_days FROM complaints WHERE id = :id"), {"id": id}).fetchone()
+    if result:
+        complaint.recommended_action = result[0]
+        complaint.recommendation_explanation = result[1]
+        complaint.estimated_resolution_days = result[2]
+
     return complaint
 
 @router.patch("/{id}/status", response_model=Complaint)
